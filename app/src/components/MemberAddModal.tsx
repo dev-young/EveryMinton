@@ -16,10 +16,12 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   onSavedContinue?: () => void;
+  onSavedName?: (name: string) => void;
+  manageHistory?: boolean;
   onLastValues?: (gender: Gender, grade: LevelGrade, subGrade: LevelSubGrade) => void;
 }
 
-export function MemberAddModal({ member, defaultName, defaultGender, defaultGrade, defaultSubGrade, onClose, onSaved, onSavedContinue, onLastValues }: Props) {
+export function MemberAddModal({ member, defaultName, defaultGender, defaultGrade, defaultSubGrade, onClose, onSaved, onSavedContinue, onSavedName, manageHistory = true, onLastValues }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
   const existingLevel = member ? scoreToLevelInfo(member.level) : null;
@@ -52,6 +54,8 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
 
   // 안드로이드 백버튼 대응
   useEffect(() => {
+    if (!manageHistory) return;
+
     window.history.pushState({ modal: true }, "");
 
     function handlePopState() {
@@ -62,12 +66,14 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [dismiss]);
+  }, [dismiss, manageHistory]);
 
   function closeModal() {
     if (closedRef.current) return;
     closedRef.current = true;
-    window.history.back();
+    if (manageHistory) {
+      window.history.back();
+    }
     onClose();
   }
 
@@ -155,7 +161,9 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
         });
         if (!closedRef.current) {
           closedRef.current = true;
-          window.history.back();
+          if (manageHistory) {
+            window.history.back();
+          }
           onSaved();
         }
       } else {
@@ -164,13 +172,16 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
           gender,
           level: score,
         });
+        onSavedName?.(name.trim());
         if (continueAdding) {
           setName("");
           onSavedContinue?.();
         } else {
           if (!closedRef.current) {
             closedRef.current = true;
-            window.history.back();
+            if (manageHistory) {
+              window.history.back();
+            }
             onSaved();
           }
         }
