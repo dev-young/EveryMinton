@@ -142,7 +142,7 @@ export function ParticipantsTab({
         <div className="py-12 text-center text-[var(--color-text-muted)]">
           <p className="mb-2 text-3xl">👥</p>
           <p className="text-sm">참여자가 없습니다</p>
-          <p className="mt-1 text-xs">참여자를 추가하세요</p>
+          {!readOnly && <p className="mt-1 text-xs">참여자를 추가하세요</p>}
         </div>
       )}
 

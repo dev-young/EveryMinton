@@ -24,10 +24,62 @@ interface Props {
 
 type Tab = "courts" | "waiting" | "participants" | "settings" | "info";
 
+interface ScheduleDetailData {
+  schedule: Schedule | null;
+  participants: Participant[];
+  members: Member[];
+  games: Game[];
+}
+
 function formatDateShort(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   const days = ["일", "월", "화", "수", "목", "금", "토"];
   return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+}
+
+async function getVisibleMembers(participants: Participant[], games: Game[]): Promise<Member[]> {
+  const memberIds = new Set<string>();
+
+  participants.forEach((participant) => memberIds.add(participant.memberId));
+  games.forEach((game) => {
+    [...game.team1, ...game.team2].forEach((memberId) => memberIds.add(memberId));
+  });
+
+  const members = await Promise.all([...memberIds].map((memberId) => memberRepository.getById(memberId)));
+  return members
+    .filter((member): member is Member => member !== null)
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+async function fetchScheduleDetailData(scheduleId: string, isReadOnly: boolean): Promise<ScheduleDetailData> {
+  if (isReadOnly) {
+    const [schedule, participants, games] = await Promise.all([
+      scheduleRepository.getById(scheduleId),
+      participantRepository.getAll(scheduleId),
+      gameRepository.getAll(scheduleId),
+    ]);
+
+    return {
+      schedule,
+      participants,
+      members: await getVisibleMembers(participants, games),
+      games,
+    };
+  }
+
+  const [schedule, participants, members, games] = await Promise.all([
+    scheduleRepository.getById(scheduleId),
+    participantRepository.getAll(scheduleId),
+    memberRepository.getAll(),
+    gameRepository.getAll(scheduleId),
+  ]);
+
+  return {
+    schedule,
+    participants,
+    members,
+    games,
+  };
 }
 
 async function copyText(text: string) {
@@ -57,6 +109,7 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("courts");
   const [showAddParticipant, setShowAddParticipant] = useState(false);
   const [showManualMatch, setShowManualMatch] = useState(false);
@@ -73,39 +126,57 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
     "level_balance",
   ]);
 
-  const loadData = useCallback(async (showLoading = false) => {
+  const applyData = useCallback((data: ScheduleDetailData) => {
+    setSchedule(data.schedule);
+    setParticipants(data.participants);
+    setMembers(data.members);
+    setGames(data.games);
+  }, []);
+
+  const loadData = useCallback(async () => {
     try {
-      if (showLoading) setLoading(true);
-
-      const [scheduleData, participantsData, membersData, gamesData] = await Promise.all([
-        scheduleRepository.getById(scheduleId),
-        participantRepository.getAll(scheduleId),
-        memberRepository.getAll(),
-        gameRepository.getAll(scheduleId),
-      ]);
-
-      setSchedule(scheduleData);
-      setParticipants(participantsData);
-      setMembers(membersData);
-      setGames(gamesData);
+      applyData(await fetchScheduleDetailData(scheduleId, isReadOnly));
     } catch (error) {
       console.error("데이터 로드 실패:", error);
     } finally {
       setLoading(false);
     }
-  }, [scheduleId]);
+  }, [applyData, isReadOnly, scheduleId]);
+
+  const refreshViewData = useCallback(async () => {
+    try {
+      setRefreshing(true);
+      applyData(await fetchScheduleDetailData(scheduleId, true));
+    } catch (error) {
+      console.error("데이터 갱신 실패:", error);
+      showToast("정보 갱신에 실패했습니다.");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [applyData, scheduleId, showToast]);
 
   useEffect(() => {
-    loadData(true);
-  }, [loadData]);
+    let ignore = false;
+
+    fetchScheduleDetailData(scheduleId, isReadOnly)
+      .then((data) => {
+        if (!ignore) applyData(data);
+      })
+      .catch((error) => {
+        console.error("데이터 로드 실패:", error);
+      })
+      .finally(() => {
+        if (!ignore) setLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [applyData, isReadOnly, scheduleId]);
 
   function getMember(memberId: string): Member | undefined {
     return members.find((member) => member.id === memberId);
   }
-
-  const waitingCount = participants.filter((participant) => participant.status === "waiting").length;
-  const playingCount = participants.filter((participant) => participant.status === "playing").length;
-  const registeredCount = participants.filter((participant) => participant.status === "registered").length;
 
   async function copyShareLink() {
     try {
@@ -142,9 +213,11 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-3 bg-gradient-to-r from-[#0066B3] to-[#004d8a] px-4 py-3.5 text-white">
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <button onClick={() => router.push("/")} className="text-lg" aria-label="뒤로가기">
-            ❮
-          </button>
+          {!isReadOnly && (
+            <button onClick={() => router.push("/")} className="text-lg" aria-label="뒤로가기">
+              ❮
+            </button>
+          )}
           <h1 className="truncate text-base font-bold">{dateDisplay}</h1>
         </div>
 
@@ -176,7 +249,7 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
         <TabButton label="일정정보" active={activeTab === "info"} onClick={() => setActiveTab("info")} />
       </div>
 
-      <div className="flex-1 p-4">
+      <div className={`flex-1 p-4 ${isReadOnly ? "pb-24" : ""}`}>
         {activeTab === "courts" && (
           <CourtsTab
             scheduleId={scheduleId}
@@ -301,8 +374,15 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
       )}
 
       {isReadOnly && (
-        <div className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-32px)] max-w-3xl -translate-x-1/2 rounded-xl border border-[var(--color-border)] bg-white/95 px-4 py-3 text-center text-[11px] text-[var(--color-text-muted)] shadow-lg backdrop-blur">
-          참여 {participants.length}명 · 대기 {waitingCount}명 · 게임중 {playingCount}명 · 예정 {registeredCount}명
+        <div className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-32px)] max-w-3xl -translate-x-1/2">
+          <button
+            type="button"
+            onClick={refreshViewData}
+            disabled={refreshing}
+            className="w-full rounded-xl bg-[var(--color-primary)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-primary-dark)] disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {refreshing ? "갱신중..." : "정보 새로고침"}
+          </button>
         </div>
       )}
     </div>
