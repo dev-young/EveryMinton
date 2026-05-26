@@ -4,7 +4,7 @@ interface Props {
   params: Promise<{ id: string }> | { id: string };
 }
 
-export default async function ScheduleDetailPage({ params }: Props) {
+export default async function ViewSchedulePage({ params }: Props) {
   const resolvedParams = await params;
-  return <ScheduleDetailClient scheduleId={resolvedParams.id} mode="admin" />;
+  return <ScheduleDetailClient scheduleId={resolvedParams.id} mode="view" />;
 }

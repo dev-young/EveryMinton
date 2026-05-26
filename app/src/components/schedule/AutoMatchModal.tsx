@@ -49,7 +49,12 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
   const [gameCount, setGameCount] = useState(Math.max(1, Math.floor(idleCount / 4)));
 
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<{ team1: [string, string]; team2: [string, string] }[]>([]);
+  const [preview, setPreview] = useState<{ team1: [string, string]; team2: [string, string] }[]>(() =>
+    generateMatches(participants, members, games, priorities, {
+      includePlayingMembers,
+      gameCount,
+    })
+  );
 
   const dismiss = useCallback(() => {
     if (closedRef.current) return;
@@ -110,18 +115,19 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
   }
 
   // 미리보기 생성
-  function generatePreview() {
+  const generatePreview = useCallback(() => {
     const results = generateMatches(participants, members, games, priorities, {
       includePlayingMembers,
       gameCount,
     });
     setPreview(results);
-  }
+  }, [gameCount, games, includePlayingMembers, members, participants, priorities]);
 
   // 미리보기 자동 생성
   useEffect(() => {
-    generatePreview();
-  }, [includePlayingMembers, gameCount, participants, members, games, priorities]);
+    const timer = window.setTimeout(generatePreview, 0);
+    return () => window.clearTimeout(timer);
+  }, [generatePreview]);
 
   function getMember(id: string): Member | undefined {
     return members.find((m) => m.id === id);
