@@ -189,16 +189,22 @@ export function CourtsTab({
                     진행중 : {game.startedAt && formatElapsed(game.startedAt)}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex gap-1">
+                <div
+                  className={
+                    readOnly
+                      ? "grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2"
+                      : "flex flex-wrap items-center gap-2"
+                  }
+                >
+                  <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
                     {game.team1.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} />
+                      <PlayerChip key={id} member={getMember(id)} fill={readOnly} />
                     ))}
                   </div>
-                  <span className="text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
-                  <div className="flex gap-1">
+                  <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
+                  <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
                     {game.team2.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} />
+                      <PlayerChip key={id} member={getMember(id)} fill={readOnly} />
                     ))}
                   </div>
                 </div>
@@ -283,23 +289,31 @@ export function CourtsTab({
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex gap-1">
+                    <div
+                      className={
+                        readOnly
+                          ? "grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2"
+                          : "flex flex-wrap items-center gap-2"
+                      }
+                    >
+                      <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
                         {game.team1.map((id) => (
                           <PlayerChipDetail
                             key={id}
                             member={getMember(id)}
                             participant={participants.find((participant) => participant.memberId === id)}
+                            fill={readOnly}
                           />
                         ))}
                       </div>
-                      <span className="text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
-                      <div className="flex gap-1">
+                      <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
+                      <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
                         {game.team2.map((id) => (
                           <PlayerChipDetail
                             key={id}
                             member={getMember(id)}
                             participant={participants.find((participant) => participant.memberId === id)}
+                            fill={readOnly}
                           />
                         ))}
                       </div>
@@ -374,7 +388,7 @@ export function CourtsTab({
   );
 }
 
-function PlayerChip({ member }: { member: Member | undefined }) {
+function PlayerChip({ member, fill = false }: { member: Member | undefined; fill?: boolean }) {
   if (!member) return null;
 
   const isMale = member.gender === "male";
@@ -382,11 +396,11 @@ function PlayerChip({ member }: { member: Member | undefined }) {
 
   return (
     <span
-      className={`flex flex-col items-center rounded-md px-1.5 py-1 ${
+      className={`flex min-w-0 flex-col items-center rounded-md px-1.5 py-1 ${fill ? "w-full" : ""} ${
         isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"
       }`}
     >
-      <span className="text-sm font-bold">{member.name}</span>
+      <span className="max-w-full truncate text-sm font-bold">{member.name}</span>
       <span className="text-[9.5px] opacity-60">{levelInfo.grade}조</span>
     </span>
   );
@@ -395,9 +409,11 @@ function PlayerChip({ member }: { member: Member | undefined }) {
 function PlayerChipDetail({
   member,
   participant,
+  fill = false,
 }: {
   member: Member | undefined;
   participant: Participant | undefined;
+  fill?: boolean;
 }) {
   if (!member) return null;
 
@@ -412,9 +428,9 @@ function PlayerChipDetail({
       : "bg-pink-50 text-pink-600";
 
   return (
-    <span className={`flex flex-col items-center rounded-md px-1.5 py-1 ${bgColor}`}>
-      <span className="text-sm font-bold">{member.name}</span>
-      <span className="text-[9.5px] opacity-60">
+    <span className={`flex min-w-0 flex-col items-center rounded-md px-1.5 py-1 ${fill ? "w-full" : ""} ${bgColor}`}>
+      <span className="max-w-full truncate text-sm font-bold">{member.name}</span>
+      <span className="max-w-full truncate text-[9.5px] opacity-60">
         {levelInfo.display} · {gph.toFixed(1)}/h
       </span>
     </span>
