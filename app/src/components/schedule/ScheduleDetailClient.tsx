@@ -381,7 +381,7 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
             disabled={refreshing}
             className="w-full rounded-xl bg-[var(--color-primary)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-primary-dark)] disabled:cursor-not-allowed disabled:bg-gray-300"
           >
-            {refreshing ? "갱신중..." : "정보 새로고침"}
+            {refreshing ? "갱신중..." : "새로고침"}
           </button>
         </div>
       )}
@@ -393,7 +393,7 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
   return (
     <button
       onClick={onClick}
-      className={`flex-1 border-b-2 py-3 text-xs font-semibold transition-colors ${
+      className={`flex-1 border-b-2 py-3 text-sm font-semibold transition-colors ${
         active
           ? "border-[var(--color-primary)] text-[var(--color-primary)]"
           : "border-transparent text-[var(--color-text-muted)]"
