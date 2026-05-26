@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Every Minton - 모임원 관리</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafb; color: #1a2b3c; max-width: 768px; margin: 0 auto; min-height: 100vh; }
+    
+    /* Header */
+    .header { background: linear-gradient(135deg, #0066B3 0%, #004d8a 100%); color: white; padding: 20px; }
+    .header-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-logo span { color: #4dd88a; }
+    
+    /* Navigation */
+    .nav { display: flex; background: white; border-bottom: 1px solid #e8eef3; }
+    .nav a { flex: 1; padding: 14px 16px; text-decoration: none; color: #7a8fa0; font-size: 13px; font-weight: 600; text-align: center; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .nav a.active { color: #0066B3; border-bottom-color: #0066B3; }
+    
+    /* Content */
+    .content { padding: 16px; }
+    
+    /* Search */
+    .search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+    .search-input { flex: 1; padding: 11px 14px; border: 1px solid #e8eef3; border-radius: 10px; font-size: 14px; background: white; transition: border-color 0.2s; }
+    .search-input:focus { outline: none; border-color: #0066B3; }
+    .btn-add { background: #00A651; color: white; border: none; padding: 11px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    
+    /* Filter */
+    .filter-row { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 4px; }
+    .filter-row::-webkit-scrollbar { display: none; }
+    .filter-chip { padding: 7px 14px; border-radius: 20px; border: 1px solid #e8eef3; background: white; font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; color: #5a6f80; transition: all 0.2s; }
+    .filter-chip.active { background: #0066B3; color: white; border-color: #0066B3; }
+    
+    /* Member Count */
+    .member-count { font-size: 12px; color: #9caab7; margin-bottom: 10px; font-weight: 500; }
+    
+    /* Member List */
+    .member-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,102,179,0.06); border: 1px solid #e8eef3; }
+    .member-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid #f4f7f9; transition: background 0.15s; }
+    .member-item:last-child { border-bottom: none; }
+    .member-item:active { background: #f8fafb; }
+    .member-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; margin-right: 12px; }
+    .avatar-m { background: #e6f4ff; color: #0066B3; }
+    .avatar-f { background: #fce7f3; color: #d6336c; }
+    .member-info { flex: 1; }
+    .member-name { font-size: 14px; font-weight: 600; color: #1a2b3c; }
+    .member-detail { font-size: 12px; color: #9caab7; margin-top: 2px; }
+    .member-level { font-size: 12px; padding: 4px 10px; border-radius: 8px; font-weight: 700; }
+    .level-a { background: #fff0e6; color: #e8590c; }
+    .level-b { background: #e6f4ff; color: #0066B3; }
+    .level-c { background: #e6f9ed; color: #00A651; }
+    .level-d { background: #f3f0ff; color: #7048e8; }
+    .level-e { background: #f1f5f8; color: #7a8fa0; }
+    .btn-more { background: none; border: none; font-size: 20px; cursor: pointer; color: #c4d0da; padding: 4px 8px; }
+    
+    /* Modal */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,30,60,0.5); display: none; align-items: flex-end; justify-content: center; z-index: 200; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: white; border-radius: 20px 20px 0 0; padding: 28px 20px; width: 100%; max-width: 768px; max-height: 85vh; overflow-y: auto; }
+    .modal-handle { width: 36px; height: 4px; background: #e8eef3; border-radius: 2px; margin: 0 auto 20px; }
+    .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 24px; color: #1a2b3c; }
+    
+    .form-group { margin-bottom: 18px; }
+    .form-label { font-size: 13px; font-weight: 600; color: #5a6f80; margin-bottom: 8px; display: block; }
+    .form-input { width: 100%; padding: 12px 14px; border: 1px solid #e8eef3; border-radius: 10px; font-size: 14px; transition: border-color 0.2s; }
+    .form-input:focus { outline: none; border-color: #0066B3; }
+    
+    .radio-group { display: flex; gap: 10px; }
+    .radio-btn { flex: 1; padding: 11px; border: 2px solid #e8eef3; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; color: #5a6f80; }
+    .radio-btn.selected-m { background: #e6f4ff; color: #0066B3; border-color: #0066B3; }
+    .radio-btn.selected-f { background: #fce7f3; color: #d6336c; border-color: #d6336c; }
+    
+    .level-selector { margin-bottom: 10px; }
+    .level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 10px; }
+    .level-btn { padding: 10px 4px; border: 2px solid #e8eef3; border-radius: 10px; font-size: 14px; font-weight: 700; text-align: center; cursor: pointer; transition: all 0.2s; color: #5a6f80; }
+    .level-btn.selected { background: #0066B3; color: white; border-color: #0066B3; }
+    .sub-level-group { display: flex; gap: 8px; }
+    .sub-level-btn { flex: 1; padding: 10px; border: 2px solid #e8eef3; border-radius: 10px; font-size: 13px; font-weight: 600; text-align: center; cursor: pointer; transition: all 0.2s; color: #5a6f80; }
+    .sub-level-btn.selected { background: #e6f4ff; color: #0066B3; border-color: #0066B3; }
+    
+    .level-preview { text-align: center; margin-top: 12px; padding: 10px; background: #f8fafb; border-radius: 8px; font-size: 13px; color: #7a8fa0; }
+    .level-preview strong { color: #0066B3; font-size: 15px; }
+    
+    .btn-submit { width: 100%; padding: 15px; background: #00A651; color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background 0.2s; }
+    .btn-submit:active { background: #008c44; }
+    .btn-cancel { width: 100%; padding: 15px; background: #f1f5f8; color: #5a6f80; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">Every<span>Minton</span></div>
+  </div>
+  
+  <nav class="nav">
+    <a href="index.html">일정</a>
+    <a href="members.html" class="active">모임원</a>
+  </nav>
+
+  <div class="content">
+    <!-- 검색 + 추가 -->
+    <div class="search-bar">
+      <input type="text" class="search-input" placeholder="이름으로 검색">
+      <button class="btn-add" onclick="openModal()">+ 등록</button>
+    </div>
+
+    <!-- 필터 -->
+    <div class="filter-row">
+      <span class="filter-chip active">전체</span>
+      <span class="filter-chip">남성</span>
+      <span class="filter-chip">여성</span>
+      <span class="filter-chip">A급</span>
+      <span class="filter-chip">B급</span>
+      <span class="filter-chip">C급</span>
+      <span class="filter-chip">D급</span>
+      <span class="filter-chip">E급</span>
+    </div>
+
+    <!-- 인원 수 -->
+    <div class="member-count">전체 16명 (남 10 · 여 6)</div>
+
+    <!-- 모임원 목록 -->
+    <div class="member-list">
+      <div class="member-item">
+        <div class="member-avatar avatar-m">김</div>
+        <div class="member-info">
+          <div class="member-name">김민수</div>
+          <div class="member-detail">남 · 등록 2024.12.01</div>
+        </div>
+        <span class="member-level level-b">B상</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-f">이</div>
+        <div class="member-info">
+          <div class="member-name">이수진</div>
+          <div class="member-detail">여 · 등록 2024.12.01</div>
+        </div>
+        <span class="member-level level-c">C중</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-m">박</div>
+        <div class="member-info">
+          <div class="member-name">박준호</div>
+          <div class="member-detail">남 · 등록 2024.12.05</div>
+        </div>
+        <span class="member-level level-a">A중</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-f">최</div>
+        <div class="member-info">
+          <div class="member-name">최유리</div>
+          <div class="member-detail">여 · 등록 2024.12.08</div>
+        </div>
+        <span class="member-level level-b">B중</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-m">정</div>
+        <div class="member-info">
+          <div class="member-name">정대현</div>
+          <div class="member-detail">남 · 등록 2024.12.10</div>
+        </div>
+        <span class="member-level level-b">B하</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-f">강</div>
+        <div class="member-info">
+          <div class="member-name">강미영</div>
+          <div class="member-detail">여 · 등록 2024.12.12</div>
+        </div>
+        <span class="member-level level-c">C상</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-m">한</div>
+        <div class="member-info">
+          <div class="member-name">한승우</div>
+          <div class="member-detail">남 · 등록 2024.12.15</div>
+        </div>
+        <span class="member-level level-a">A하</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-m">오</div>
+        <div class="member-info">
+          <div class="member-name">오진석</div>
+          <div class="member-detail">남 · 등록 2024.12.18</div>
+        </div>
+        <span class="member-level level-b">B중</span>
+        <button class="btn-more">⋮</button>
+      </div>
+      <div class="member-item">
+        <div class="member-avatar avatar-f">서</div>
+        <div class="member-info">
+          <div class="member-name">서예린</div>
+          <div class="member-detail">여 · 등록 2024.12.20</div>
+        </div>
+        <span class="member-level level-d">D상</span>
+        <button class="btn-more">⋮</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모임원 등록 모달 -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">모임원 등록</div>
+      
+      <div class="form-group">
+        <label class="form-label">이름</label>
+        <input type="text" class="form-input" placeholder="이름을 입력하세요">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">성별</label>
+        <div class="radio-group">
+          <div class="radio-btn selected-m">👨 남성</div>
+          <div class="radio-btn">👩 여성</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">급수</label>
+        <div class="level-selector">
+          <div class="level-grid">
+            <div class="level-btn">A</div>
+            <div class="level-btn selected">B</div>
+            <div class="level-btn">C</div>
+            <div class="level-btn">D</div>
+            <div class="level-btn">E</div>
+          </div>
+          <div class="sub-level-group">
+            <div class="sub-level-btn">하</div>
+            <div class="sub-level-btn selected">중</div>
+            <div class="sub-level-btn">상</div>
+          </div>
+        </div>
+        <div class="level-preview">선택된 급수: <strong>B중</strong> (내부 점수: 80)</div>
+      </div>
+
+      <button class="btn-submit">등록하기</button>
+      <button class="btn-cancel" onclick="closeModal()">취소</button>
+    </div>
+  </div>
+
+  <script>
+    function openModal() {
+      document.getElementById('addModal').classList.add('show');
+    }
+    function closeModal() {
+      document.getElementById('addModal').classList.remove('show');
+    }
+    document.getElementById('addModal').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+  </script>
+</body>
+</html>

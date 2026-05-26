@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Every Minton - 일정 상세</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; max-width: 768px; margin: 0 auto; padding-bottom: 80px; }
+    
+    /* Header */
+    .header { background: #2563eb; color: white; padding: 16px 20px; position: sticky; top: 0; z-index: 100; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 18px; font-weight: 700; }
+    .header-info { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+    .btn-settings { background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; }
+    
+    /* Tabs */
+    .tabs { display: flex; background: white; border-bottom: 1px solid #e5e5e5; overflow-x: auto; }
+    .tabs button { flex-shrink: 0; padding: 12px 16px; border: none; background: none; font-size: 13px; font-weight: 500; color: #666; cursor: pointer; border-bottom: 2px solid transparent; }
+    .tabs button.active { color: #2563eb; border-bottom-color: #2563eb; }
+    
+    /* Content */
+    .content { padding: 16px; }
+    .section { margin-bottom: 20px; }
+    .section-header { font-size: 14px; font-weight: 600; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Court Card */
+    .court-card { background: white; border-radius: 10px; padding: 12px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .court-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .court-name { font-size: 13px; font-weight: 600; }
+    .court-status { font-size: 11px; padding: 3px 8px; border-radius: 10px; }
+    .court-playing { background: #dcfce7; color: #16a34a; }
+    .court-waiting { background: #fef3c7; color: #d97706; }
+    .court-empty { background: #f3f4f6; color: #9ca3af; }
+    .court-players { display: flex; gap: 4px; flex-wrap: wrap; }
+    .team { display: flex; gap: 4px; align-items: center; }
+    .team-vs { font-size: 11px; color: #999; margin: 0 6px; }
+    .player-chip { font-size: 11px; padding: 4px 8px; border-radius: 6px; background: #eff6ff; color: #1d4ed8; }
+    .player-chip.female { background: #fdf2f8; color: #db2777; }
+    .btn-end-game { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 8px; }
+    .btn-start-game { background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 8px; }
+    
+    /* Waiting List */
+    .waiting-list { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+    .waiting-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f3f4f6; }
+    .waiting-item:last-child { border-bottom: none; }
+    .waiting-rank { width: 24px; font-size: 12px; color: #999; font-weight: 500; }
+    .waiting-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .waiting-gender { font-size: 11px; margin-right: 8px; padding: 2px 6px; border-radius: 4px; }
+    .gender-male { background: #eff6ff; color: #2563eb; }
+    .gender-female { background: #fdf2f8; color: #db2777; }
+    .waiting-stats { text-align: right; }
+    .waiting-gph { font-size: 12px; font-weight: 600; color: #1a1a1a; }
+    .waiting-time { font-size: 11px; color: #999; }
+    
+    /* Floating Action Button */
+    .fab-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 100; max-width: 768px; }
+    .fab { padding: 14px 24px; border-radius: 50px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+    .fab-auto { background: #2563eb; color: white; }
+    .fab-manual { background: white; color: #2563eb; border: 1px solid #2563eb; }
+    
+    /* Participant Section */
+    .participant-group-title { font-size: 12px; color: #666; font-weight: 500; margin: 12px 0 6px; }
+    .participant-item { display: flex; align-items: center; padding: 10px 12px; background: white; border-radius: 8px; margin-bottom: 6px; }
+    .participant-name { flex: 1; font-size: 13px; font-weight: 500; }
+    .participant-level { font-size: 11px; color: #666; margin-right: 8px; }
+    .btn-status { padding: 5px 10px; border-radius: 6px; border: 1px solid #ddd; background: white; font-size: 11px; cursor: pointer; }
+    .btn-status-join { border-color: #2563eb; color: #2563eb; }
+    .btn-status-leave { border-color: #ef4444; color: #ef4444; }
+
+    /* Nav */
+    .nav { display: flex; background: white; border-bottom: 1px solid #e5e5e5; padding: 0 20px; }
+    .nav a { padding: 12px 16px; text-decoration: none; color: #666; font-size: 14px; font-weight: 500; border-bottom: 2px solid transparent; }
+    .nav a.active { color: #2563eb; border-bottom-color: #2563eb; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <h1>2025. 1. 15 (수) 일정</h1>
+        <div class="header-info">📍 강남 체육관 · 🕐 19:00~22:00 · 🏸 코트 4면</div>
+      </div>
+      <button class="btn-settings">⚙️ 설정</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="active">코트 현황</button>
+    <button>대기 인원</button>
+    <button>참여자 관리</button>
+    <button>매칭 설정</button>
+  </div>
+
+  <div class="content">
+    <!-- 코트 현황 탭 -->
+    <div class="section">
+      <div class="section-header">
+        <span>코트 현황</span>
+        <span style="font-size:12px; color:#666;">진행중 3 / 전체 4</span>
+      </div>
+
+      <!-- 코트 1: 진행중 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 1</span>
+          <span class="court-status court-playing">진행중</span>
+        </div>
+        <div class="court-players">
+          <div class="team">
+            <span class="player-chip">김민수</span>
+            <span class="player-chip female">이수진</span>
+          </div>
+          <span class="team-vs">vs</span>
+          <div class="team">
+            <span class="player-chip">박준호</span>
+            <span class="player-chip female">최유리</span>
+          </div>
+        </div>
+        <button class="btn-end-game">게임 종료</button>
+      </div>
+
+      <!-- 코트 2: 진행중 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 2</span>
+          <span class="court-status court-playing">진행중</span>
+        </div>
+        <div class="court-players">
+          <div class="team">
+            <span class="player-chip">정대현</span>
+            <span class="player-chip">한승우</span>
+          </div>
+          <span class="team-vs">vs</span>
+          <div class="team">
+            <span class="player-chip">오진석</span>
+            <span class="player-chip female">강미영</span>
+          </div>
+        </div>
+        <button class="btn-end-game">게임 종료</button>
+      </div>
+
+      <!-- 코트 3: 대기 게임 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 3</span>
+          <span class="court-status court-waiting">대기</span>
+        </div>
+        <div class="court-players">
+          <div class="team">
+            <span class="player-chip">윤태호</span>
+            <span class="player-chip female">서예린</span>
+          </div>
+          <span class="team-vs">vs</span>
+          <div class="team">
+            <span class="player-chip">임재혁</span>
+            <span class="player-chip female">김하은</span>
+          </div>
+        </div>
+        <button class="btn-start-game">게임 시작</button>
+      </div>
+
+      <!-- 코트 4: 비어있음 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 4</span>
+          <span class="court-status court-empty">비어있음</span>
+        </div>
+        <div style="font-size: 12px; color: #999; text-align: center; padding: 12px 0;">배정된 게임 없음</div>
+      </div>
+    </div>
+
+    <!-- 대기 인원 섹션 (간략히) -->
+    <div class="section">
+      <div class="section-header">
+        <span>대기중 (4명)</span>
+      </div>
+      <div class="waiting-list">
+        <div class="waiting-item">
+          <span class="waiting-rank">1</span>
+          <span class="waiting-name">송지훈</span>
+          <span class="waiting-gender gender-male">남</span>
+          <div class="waiting-stats">
+            <div class="waiting-gph">2.1 게임/h</div>
+            <div class="waiting-time">대기 15분</div>
+          </div>
+        </div>
+        <div class="waiting-item">
+          <span class="waiting-rank">2</span>
+          <span class="waiting-name">이채원</span>
+          <span class="waiting-gender gender-female">여</span>
+          <div class="waiting-stats">
+            <div class="waiting-gph">2.3 게임/h</div>
+            <div class="waiting-time">대기 12분</div>
+          </div>
+        </div>
+        <div class="waiting-item">
+          <span class="waiting-rank">3</span>
+          <span class="waiting-name">장현우</span>
+          <span class="waiting-gender gender-male">남</span>
+          <div class="waiting-stats">
+            <div class="waiting-gph">2.5 게임/h</div>
+            <div class="waiting-time">대기 8분</div>
+          </div>
+        </div>
+        <div class="waiting-item">
+          <span class="waiting-rank">4</span>
+          <span class="waiting-name">박소연</span>
+          <span class="waiting-gender gender-female">여</span>
+          <div class="waiting-stats">
+            <div class="waiting-gph">2.8 게임/h</div>
+            <div class="waiting-time">대기 5분</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 하단 플로팅 버튼 -->
+  <div class="fab-container">
+    <button class="fab fab-auto">⚡ 자동 매칭</button>
+    <button class="fab fab-manual">✋ 수동 생성</button>
+  </div>
+</body>
+</html>

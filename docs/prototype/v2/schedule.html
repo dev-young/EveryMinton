@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Every Minton - 일정 상세</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafb; color: #1a2b3c; max-width: 768px; margin: 0 auto; min-height: 100vh; padding-bottom: 80px; }
+    
+    /* Top Bar */
+    .top-bar { background: #0066B3; color: white; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+    .btn-back { background: none; border: none; color: white; font-size: 18px; cursor: pointer; padding: 4px; }
+    .top-bar-title { font-size: 16px; font-weight: 700; }
+    
+    /* Tabs */
+    .tabs { display: flex; background: white; border-bottom: 1px solid #e8eef3; position: sticky; top: 0; z-index: 100; }
+    .tabs button { flex: 1; padding: 13px 8px; border: none; background: none; font-size: 12px; font-weight: 600; color: #7a8fa0; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tabs button.active { color: #0066B3; border-bottom-color: #0066B3; }
+    
+    /* Tab Content */
+    .tab-content { display: none; padding: 16px; }
+    .tab-content.active { display: block; }
+    
+    /* Section */
+    .section { margin-bottom: 20px; }
+    .section-header { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .section-badge { font-size: 11px; background: #e6f9ed; color: #00A651; padding: 3px 8px; border-radius: 10px; font-weight: 600; }
+    
+    /* Court Card */
+    .court-card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0,102,179,0.06); border: 1px solid #e8eef3; }
+    .court-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .court-name { font-size: 13px; font-weight: 700; color: #1a2b3c; }
+    .court-status { font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 600; }
+    .court-playing { background: #e6f9ed; color: #00A651; }
+    .court-waiting { background: #fff8e6; color: #d4880f; }
+    .court-empty { background: #f1f5f8; color: #9caab7; }
+    
+    .court-teams { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .team { display: flex; gap: 4px; }
+    .team-vs { font-size: 11px; color: #9caab7; font-weight: 700; }
+    .player-chip { font-size: 11px; padding: 5px 9px; border-radius: 6px; font-weight: 500; }
+    .chip-male { background: #e6f4ff; color: #0066B3; }
+    .chip-female { background: #fce7f3; color: #d6336c; }
+    
+    .court-actions { margin-top: 10px; display: flex; gap: 8px; }
+    .btn-game-end { background: #ff4757; color: white; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-game-start { background: #00A651; color: white; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .btn-game-cancel { background: #f1f5f8; color: #5a6f80; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    
+    /* Waiting List */
+    .waiting-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,102,179,0.06); border: 1px solid #e8eef3; }
+    .waiting-item { display: flex; align-items: center; padding: 12px 14px; border-bottom: 1px solid #f4f7f9; }
+    .waiting-item:last-child { border-bottom: none; }
+    .waiting-priority { width: 22px; height: 22px; border-radius: 50%; background: #e6f4ff; color: #0066B3; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
+    .waiting-priority.urgent { background: #ffe6e6; color: #ff4757; }
+    .waiting-name { flex: 1; font-size: 13px; font-weight: 600; }
+    .waiting-gender { font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-right: 8px; font-weight: 600; }
+    .gender-m { background: #e6f4ff; color: #0066B3; }
+    .gender-f { background: #fce7f3; color: #d6336c; }
+    .waiting-stats { text-align: right; }
+    .stat-gph { font-size: 12px; font-weight: 700; color: #1a2b3c; }
+    .stat-wait { font-size: 11px; color: #9caab7; }
+    
+    /* Participant List */
+    .participant-group { margin-bottom: 16px; }
+    .participant-group-title { font-size: 12px; font-weight: 600; color: #7a8fa0; margin-bottom: 8px; padding-left: 4px; }
+    .participant-card { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,102,179,0.06); border: 1px solid #e8eef3; }
+    .participant-item { display: flex; align-items: center; padding: 11px 14px; border-bottom: 1px solid #f4f7f9; }
+    .participant-item:last-child { border-bottom: none; }
+    .participant-avatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; margin-right: 10px; }
+    .avatar-m { background: #e6f4ff; color: #0066B3; }
+    .avatar-f { background: #fce7f3; color: #d6336c; }
+    .participant-info { flex: 1; }
+    .participant-name { font-size: 13px; font-weight: 600; }
+    .participant-meta { font-size: 11px; color: #9caab7; margin-top: 1px; }
+    .btn-status { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-activate { background: #e6f9ed; color: #00A651; }
+    .btn-leave { background: #fff0f0; color: #ff4757; }
+    
+    /* Info Tab */
+    .info-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 1px 4px rgba(0,102,179,0.06); border: 1px solid #e8eef3; margin-bottom: 14px; }
+    .info-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f4f7f9; }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { font-size: 13px; color: #7a8fa0; }
+    .info-value { font-size: 13px; font-weight: 600; color: #1a2b3c; }
+    .btn-edit-info { background: #f1f5f8; color: #5a6f80; border: none; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 4px; }
+    
+    /* Matching Settings */
+    .priority-list { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,102,179,0.06); border: 1px solid #e8eef3; }
+    .priority-item { display: flex; align-items: center; padding: 14px; border-bottom: 1px solid #f4f7f9; }
+    .priority-item:last-child { border-bottom: none; }
+    .priority-handle { color: #c4d0da; font-size: 16px; margin-right: 12px; cursor: grab; }
+    .priority-num { width: 22px; height: 22px; border-radius: 50%; background: #0066B3; color: white; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; margin-right: 10px; }
+    .priority-text { font-size: 13px; font-weight: 500; flex: 1; }
+    
+    /* FAB */
+    .fab-container { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; z-index: 200; }
+    .fab { padding: 13px 22px; border-radius: 50px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.15); transition: transform 0.15s; }
+    .fab:active { transform: scale(0.95); }
+    .fab-auto { background: #00A651; color: white; }
+    .fab-manual { background: white; color: #0066B3; border: 2px solid #0066B3; }
+    
+    /* Summary Bar */
+    .summary-bar { display: flex; background: white; padding: 12px 16px; gap: 8px; border-bottom: 1px solid #e8eef3; }
+    .summary-item { flex: 1; text-align: center; }
+    .summary-value { font-size: 16px; font-weight: 800; color: #0066B3; }
+    .summary-label { font-size: 10px; color: #9caab7; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <!-- Top Bar (간단한 뒤로가기만) -->
+  <div class="top-bar">
+    <a href="index.html" class="btn-back" style="color:white; text-decoration:none;">←</a>
+    <span class="top-bar-title">일정 상세</span>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar">
+    <div class="summary-item">
+      <div class="summary-value">12</div>
+      <div class="summary-label">참여 인원</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value">3/4</div>
+      <div class="summary-label">코트 사용</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value">8</div>
+      <div class="summary-label">진행 게임</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-value">4</div>
+      <div class="summary-label">대기 인원</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="active" onclick="switchTab('courts')">코트</button>
+    <button onclick="switchTab('waiting')">대기</button>
+    <button onclick="switchTab('participants')">참여자</button>
+    <button onclick="switchTab('settings')">매칭설정</button>
+    <button onclick="switchTab('info')">일정정보</button>
+  </div>
+
+  <!-- 코트 현황 탭 -->
+  <div class="tab-content active" id="tab-courts">
+    <div class="section">
+      <!-- 코트 1: 진행중 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 1</span>
+          <span class="court-status court-playing">● 진행중</span>
+        </div>
+        <div class="court-teams">
+          <div class="team">
+            <span class="player-chip chip-male">김민수</span>
+            <span class="player-chip chip-female">이수진</span>
+          </div>
+          <span class="team-vs">VS</span>
+          <div class="team">
+            <span class="player-chip chip-male">박준호</span>
+            <span class="player-chip chip-female">최유리</span>
+          </div>
+        </div>
+        <div class="court-actions">
+          <button class="btn-game-end">종료</button>
+        </div>
+      </div>
+
+      <!-- 코트 2: 진행중 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 2</span>
+          <span class="court-status court-playing">● 진행중</span>
+        </div>
+        <div class="court-teams">
+          <div class="team">
+            <span class="player-chip chip-male">정대현</span>
+            <span class="player-chip chip-male">한승우</span>
+          </div>
+          <span class="team-vs">VS</span>
+          <div class="team">
+            <span class="player-chip chip-male">오진석</span>
+            <span class="player-chip chip-female">강미영</span>
+          </div>
+        </div>
+        <div class="court-actions">
+          <button class="btn-game-end">종료</button>
+        </div>
+      </div>
+
+      <!-- 코트 3: 대기 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 3</span>
+          <span class="court-status court-waiting">◐ 대기</span>
+        </div>
+        <div class="court-teams">
+          <div class="team">
+            <span class="player-chip chip-male">윤태호</span>
+            <span class="player-chip chip-female">서예린</span>
+          </div>
+          <span class="team-vs">VS</span>
+          <div class="team">
+            <span class="player-chip chip-male">임재혁</span>
+            <span class="player-chip chip-female">김하은</span>
+          </div>
+        </div>
+        <div class="court-actions">
+          <button class="btn-game-start">시작</button>
+          <button class="btn-game-cancel">취소</button>
+        </div>
+      </div>
+
+      <!-- 코트 4: 비어있음 -->
+      <div class="court-card">
+        <div class="court-header">
+          <span class="court-name">코트 4</span>
+          <span class="court-status court-empty">○ 비어있음</span>
+        </div>
+        <div style="text-align:center; padding: 16px 0; color: #c4d0da; font-size: 12px;">
+          배정된 게임 없음
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 대기 인원 탭 -->
+  <div class="tab-content" id="tab-waiting">
+    <div class="section">
+      <div class="section-header">
+        <span>대기중</span>
+        <span class="section-badge">4명</span>
+      </div>
+      <div class="waiting-list">
+        <div class="waiting-item">
+          <span class="waiting-priority urgent">1</span>
+          <span class="waiting-name">송지훈</span>
+          <span class="waiting-gender gender-m">남</span>
+          <div class="waiting-stats">
+            <div class="stat-gph">1.8 게임/h</div>
+            <div class="stat-wait">대기 18분</div>
+          </div>
+        </div>
+        <div class="waiting-item">
+          <span class="waiting-priority urgent">2</span>
+          <span class="waiting-name">이채원</span>
+          <span class="waiting-gender gender-f">여</span>
+          <div class="waiting-stats">
+            <div class="stat-gph">2.1 게임/h</div>
+            <div class="stat-wait">대기 15분</div>
+          </div>
+        </div>
+        <div class="waiting-item">
+          <span class="waiting-priority">3</span>
+          <span class="waiting-name">장현우</span>
+          <span class="waiting-gender gender-m">남</span>
+          <div class="waiting-stats">
+            <div class="stat-gph">2.5 게임/h</div>
+            <div class="stat-wait">대기 8분</div>
+          </div>
+        </div>
+        <div class="waiting-item">
+          <span class="waiting-priority">4</span>
+          <span class="waiting-name">박소연</span>
+          <span class="waiting-gender gender-f">여</span>
+          <div class="waiting-stats">
+            <div class="stat-gph">2.8 게임/h</div>
+            <div class="stat-wait">대기 5분</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 참여자 관리 탭 -->
+  <div class="tab-content" id="tab-participants">
+    <!-- 대기중 -->
+    <div class="participant-group">
+      <div class="participant-group-title">대기중 (4명)</div>
+      <div class="participant-card">
+        <div class="participant-item">
+          <div class="participant-avatar avatar-m">송</div>
+          <div class="participant-info">
+            <div class="participant-name">송지훈</div>
+            <div class="participant-meta">남 · B중 · 게임 3회</div>
+          </div>
+          <button class="btn-status btn-leave">퇴장</button>
+        </div>
+        <div class="participant-item">
+          <div class="participant-avatar avatar-f">이</div>
+          <div class="participant-info">
+            <div class="participant-name">이채원</div>
+            <div class="participant-meta">여 · C상 · 게임 2회</div>
+          </div>
+          <button class="btn-status btn-leave">퇴장</button>
+        </div>
+        <div class="participant-item">
+          <div class="participant-avatar avatar-m">장</div>
+          <div class="participant-info">
+            <div class="participant-name">장현우</div>
+            <div class="participant-meta">남 · B상 · 게임 4회</div>
+          </div>
+          <button class="btn-status btn-leave">퇴장</button>
+        </div>
+        <div class="participant-item">
+          <div class="participant-avatar avatar-f">박</div>
+          <div class="participant-info">
+            <div class="participant-name">박소연</div>
+            <div class="participant-meta">여 · C중 · 게임 4회</div>
+          </div>
+          <button class="btn-status btn-leave">퇴장</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 참여 예정 -->
+    <div class="participant-group">
+      <div class="participant-group-title">참여 예정 (2명)</div>
+      <div class="participant-card">
+        <div class="participant-item">
+          <div class="participant-avatar avatar-m">조</div>
+          <div class="participant-info">
+            <div class="participant-name">조성민</div>
+            <div class="participant-meta">남 · A하</div>
+          </div>
+          <button class="btn-status btn-activate">대기중으로</button>
+        </div>
+        <div class="participant-item">
+          <div class="participant-avatar avatar-f">윤</div>
+          <div class="participant-info">
+            <div class="participant-name">윤서영</div>
+            <div class="participant-meta">여 · B중</div>
+          </div>
+          <button class="btn-status btn-activate">대기중으로</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 퇴장 -->
+    <div class="participant-group">
+      <div class="participant-group-title">퇴장 (1명)</div>
+      <div class="participant-card">
+        <div class="participant-item" style="opacity: 0.5;">
+          <div class="participant-avatar avatar-m">권</div>
+          <div class="participant-info">
+            <div class="participant-name">권도윤</div>
+            <div class="participant-meta">남 · C중 · 게임 2회 · 20:30 퇴장</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 매칭 설정 탭 -->
+  <div class="tab-content" id="tab-settings">
+    <div class="section">
+      <div class="section-header">
+        <span>매칭 우선순위</span>
+        <span style="font-size:11px; color:#9caab7;">드래그하여 순서 변경</span>
+      </div>
+      <div class="priority-list">
+        <div class="priority-item">
+          <span class="priority-handle">☰</span>
+          <span class="priority-num">1</span>
+          <span class="priority-text">시간당 게임 횟수 균등화</span>
+        </div>
+        <div class="priority-item">
+          <span class="priority-handle">☰</span>
+          <span class="priority-num">2</span>
+          <span class="priority-text">같은 조합 반복 방지</span>
+        </div>
+        <div class="priority-item">
+          <span class="priority-handle">☰</span>
+          <span class="priority-num">3</span>
+          <span class="priority-text">성별 밸런스</span>
+        </div>
+        <div class="priority-item">
+          <span class="priority-handle">☰</span>
+          <span class="priority-num">4</span>
+          <span class="priority-text">급수(실력) 밸런스</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" style="margin-top: 20px;">
+      <div class="section-header">
+        <span>자동 매칭 옵션</span>
+      </div>
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">게임중 인원 포함</span>
+          <span class="info-value" style="color:#9caab7;">OFF</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">생성 게임 수</span>
+          <span class="info-value">빈 코트 수 (1)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 일정 정보 탭 -->
+  <div class="tab-content" id="tab-info">
+    <div class="section">
+      <div class="section-header"><span>일정 정보</span></div>
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">날짜</span>
+          <span class="info-value">2025. 1. 15 (수)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">시간</span>
+          <span class="info-value">19:00 ~ 22:00</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">장소</span>
+          <span class="info-value">강남 체육관</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">코트 수</span>
+          <span class="info-value">4면</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">상태</span>
+          <span class="info-value" style="color:#00A651;">진행중</span>
+        </div>
+        <button class="btn-edit-info">일정 수정</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header"><span>일정 통계</span></div>
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">총 진행 게임</span>
+          <span class="info-value">8회</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">참여 인원</span>
+          <span class="info-value">12명 (남 7 · 여 5)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">평균 시간당 게임</span>
+          <span class="info-value">2.4 게임/h</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">경과 시간</span>
+          <span class="info-value">1시간 23분</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAB (코트 탭, 대기 탭에서만 표시) -->
+  <div class="fab-container" id="fab">
+    <button class="fab fab-auto">⚡ 자동 매칭</button>
+    <button class="fab fab-manual">✋ 수동</button>
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tabs button').forEach(el => el.classList.remove('active'));
+      
+      // Show selected tab
+      document.getElementById('tab-' + tabId).classList.add('active');
+      event.target.classList.add('active');
+      
+      // Show/hide FAB
+      const fab = document.getElementById('fab');
+      if (tabId === 'courts' || tabId === 'waiting') {
+        fab.style.display = 'flex';
+      } else {
+        fab.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>

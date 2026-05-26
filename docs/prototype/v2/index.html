@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Every Minton - 홈</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafb; color: #1a2b3c; max-width: 768px; margin: 0 auto; min-height: 100vh; }
+    
+    /* Header */
+    .header { background: linear-gradient(135deg, #0066B3 0%, #004d8a 100%); color: white; padding: 20px; }
+    .header-logo { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header-logo span { color: #4dd88a; }
+    .header-sub { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+    
+    /* Navigation */
+    .nav { display: flex; background: white; border-bottom: 1px solid #e8eef3; }
+    .nav a { flex: 1; padding: 14px 16px; text-decoration: none; color: #7a8fa0; font-size: 13px; font-weight: 600; text-align: center; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .nav a.active { color: #0066B3; border-bottom-color: #0066B3; }
+    
+    /* Content */
+    .content { padding: 20px; }
+    
+    /* Section */
+    .section-title { font-size: 15px; font-weight: 700; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; color: #1a2b3c; }
+    .btn-primary { background: #00A651; color: white; border: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:active { background: #008c44; }
+    
+    /* Schedule Card */
+    .schedule-card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,102,179,0.06); border: 1px solid #e8eef3; transition: transform 0.15s; }
+    .schedule-card:active { transform: scale(0.98); }
+    .schedule-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .schedule-date { font-size: 15px; font-weight: 700; color: #1a2b3c; }
+    .schedule-status { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 600; }
+    .status-upcoming { background: #e6f4ff; color: #0066B3; }
+    .status-in-progress { background: #e6f9ed; color: #00A651; }
+    .status-completed { background: #f1f5f8; color: #7a8fa0; }
+    .schedule-info { font-size: 13px; color: #5a6f80; line-height: 1.8; }
+    .schedule-info-row { display: flex; align-items: center; gap: 6px; }
+    .schedule-info-row + .schedule-info-row { margin-top: 4px; }
+    .info-icon { font-size: 14px; }
+    .schedule-meta { display: flex; gap: 16px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f8; }
+    .meta-item { font-size: 12px; color: #7a8fa0; display: flex; align-items: center; gap: 4px; }
+    .meta-value { font-weight: 600; color: #1a2b3c; }
+    
+    /* Divider */
+    .divider { height: 1px; background: #e8eef3; margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-logo">Every<span>Minton</span></div>
+    <div class="header-sub">배드민턴 모임 매칭 관리</div>
+  </div>
+  
+  <nav class="nav">
+    <a href="index.html" class="active">일정</a>
+    <a href="members.html">모임원</a>
+  </nav>
+
+  <div class="content">
+    <div class="section-title">
+      <span>일정 목록</span>
+      <button class="btn-primary">+ 일정 생성</button>
+    </div>
+
+    <!-- 진행중 일정 -->
+    <a href="schedule.html" style="text-decoration:none; color:inherit;">
+      <div class="schedule-card" style="border-left: 4px solid #00A651;">
+        <div class="schedule-card-header">
+          <span class="schedule-date">2025. 1. 15 (수)</span>
+          <span class="schedule-status status-in-progress">● 진행중</span>
+        </div>
+        <div class="schedule-info">
+          <div class="schedule-info-row">
+            <span class="info-icon">📍</span> 강남 체육관
+          </div>
+          <div class="schedule-info-row">
+            <span class="info-icon">🕐</span> 19:00 ~ 22:00
+          </div>
+        </div>
+        <div class="schedule-meta">
+          <div class="meta-item">코트 <span class="meta-value">4면</span></div>
+          <div class="meta-item">참여 <span class="meta-value">12명</span></div>
+          <div class="meta-item">게임 <span class="meta-value">8회</span></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- 예정 일정 -->
+    <div class="schedule-card" style="border-left: 4px solid #0066B3;">
+      <div class="schedule-card-header">
+        <span class="schedule-date">2025. 1. 18 (토)</span>
+        <span class="schedule-status status-upcoming">예정</span>
+      </div>
+      <div class="schedule-info">
+        <div class="schedule-info-row">
+          <span class="info-icon">📍</span> 서초 배드민턴장
+        </div>
+        <div class="schedule-info-row">
+          <span class="info-icon">🕐</span> 14:00 ~ 17:00
+        </div>
+      </div>
+      <div class="schedule-meta">
+        <div class="meta-item">코트 <span class="meta-value">3면</span></div>
+        <div class="meta-item">참여 예정 <span class="meta-value">8명</span></div>
+      </div>
+    </div>
+
+    <!-- 완료 일정 -->
+    <div class="schedule-card">
+      <div class="schedule-card-header">
+        <span class="schedule-date">2025. 1. 12 (일)</span>
+        <span class="schedule-status status-completed">완료</span>
+      </div>
+      <div class="schedule-info">
+        <div class="schedule-info-row">
+          <span class="info-icon">📍</span> 강남 체육관
+        </div>
+        <div class="schedule-info-row">
+          <span class="info-icon">🕐</span> 10:00 ~ 13:00
+        </div>
+      </div>
+      <div class="schedule-meta">
+        <div class="meta-item">코트 <span class="meta-value">4면</span></div>
+        <div class="meta-item">참여 <span class="meta-value">14명</span></div>
+        <div class="meta-item">게임 <span class="meta-value">24회</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
