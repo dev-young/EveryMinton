@@ -11,18 +11,26 @@ interface Props {
   scheduleId: string;
   participants: Participant[];
   getMember: (id: string) => Member | undefined;
-  onAddClick: () => void;
-  onRefresh: () => void;
+  readOnly?: boolean;
+  onAddClick?: () => void;
+  onRefresh?: () => void;
 }
 
-export function ParticipantsTab({ scheduleId, participants, getMember, onAddClick, onRefresh }: Props) {
+export function ParticipantsTab({
+  scheduleId,
+  participants,
+  getMember,
+  readOnly = false,
+  onAddClick,
+  onRefresh,
+}: Props) {
   const { showToast } = useToast();
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
 
-  const waiting = participants.filter((p) => p.status === "waiting");
-  const playing = participants.filter((p) => p.status === "playing");
-  const registered = participants.filter((p) => p.status === "registered");
-  const left = participants.filter((p) => p.status === "left");
+  const waiting = participants.filter((participant) => participant.status === "waiting");
+  const playing = participants.filter((participant) => participant.status === "playing");
+  const registered = participants.filter((participant) => participant.status === "registered");
+  const left = participants.filter((participant) => participant.status === "left");
 
   async function changeStatus(memberId: string, newStatus: ParticipantStatus) {
     try {
@@ -35,7 +43,7 @@ export function ParticipantsTab({ scheduleId, participants, getMember, onAddClic
       }
 
       await participantRepository.update(scheduleId, memberId, updates);
-      onRefresh();
+      onRefresh?.();
     } catch (error) {
       console.error("상태 변경 실패:", error);
       showToast("상태 변경에 실패했습니다.");
@@ -50,88 +58,79 @@ export function ParticipantsTab({ scheduleId, participants, getMember, onAddClic
 
   return (
     <div className="pb-20">
-      {/* 플로팅 참여자 추가 버튼 */}
-      <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 max-w-3xl w-[calc(100%-32px)]">
-        <button
-          onClick={onAddClick}
-          className="w-full py-3.5 bg-[var(--color-accent)] text-white rounded-xl text-sm font-bold active:bg-[var(--color-accent-dark)] shadow-lg"
-        >
-          + 참여자 추가
-        </button>
-      </div>
+      {!readOnly && onAddClick && (
+        <div className="fixed bottom-5 left-1/2 z-30 w-[calc(100%-32px)] max-w-3xl -translate-x-1/2">
+          <button
+            onClick={onAddClick}
+            className="w-full rounded-xl bg-[var(--color-accent)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-accent-dark)]"
+          >
+            + 참여자 추가
+          </button>
+        </div>
+      )}
 
-      {/* 게임중 */}
       {playing.length > 0 && (
-        <ParticipantGroup
-          title="게임중"
-          count={playing.length}
-          color="text-[var(--color-warning)]"
-        >
-          {playing.map((p) => (
+        <ParticipantGroup title="게임중" count={playing.length} color="text-[var(--color-warning)]">
+          {playing.map((participant) => (
             <ParticipantItem
-              key={p.memberId}
-              participant={p}
-              member={getMember(p.memberId)}
+              key={participant.memberId}
+              participant={participant}
+              member={getMember(participant.memberId)}
               actions={
-                <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(p.memberId)} />
+                readOnly ? null : (
+                  <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(participant.memberId)} />
+                )
               }
             />
           ))}
         </ParticipantGroup>
       )}
 
-      {/* 대기중 */}
       {waiting.length > 0 && (
-        <ParticipantGroup
-          title="대기중"
-          count={waiting.length}
-          color="text-[var(--color-accent)]"
-        >
-          {waiting.map((p) => (
+        <ParticipantGroup title="대기중" count={waiting.length} color="text-[var(--color-accent)]">
+          {waiting.map((participant) => (
             <ParticipantItem
-              key={p.memberId}
-              participant={p}
-              member={getMember(p.memberId)}
+              key={participant.memberId}
+              participant={participant}
+              member={getMember(participant.memberId)}
               actions={
-                <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(p.memberId)} />
+                readOnly ? null : (
+                  <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(participant.memberId)} />
+                )
               }
             />
           ))}
         </ParticipantGroup>
       )}
 
-      {/* 참여 예정 */}
       {registered.length > 0 && (
-        <ParticipantGroup
-          title="참여 예정"
-          count={registered.length}
-          color="text-[var(--color-primary)]"
-        >
-          {registered.map((p) => (
+        <ParticipantGroup title="참여 예정" count={registered.length} color="text-[var(--color-primary)]">
+          {registered.map((participant) => (
             <ParticipantItem
-              key={p.memberId}
-              participant={p}
-              member={getMember(p.memberId)}
+              key={participant.memberId}
+              participant={participant}
+              member={getMember(participant.memberId)}
               actions={
-                <StatusButton label="대기중으로" color="accent" onClick={() => changeStatus(p.memberId, "waiting")} />
+                readOnly ? null : (
+                  <StatusButton
+                    label="대기중으로"
+                    color="accent"
+                    onClick={() => changeStatus(participant.memberId, "waiting")}
+                  />
+                )
               }
             />
           ))}
         </ParticipantGroup>
       )}
 
-      {/* 퇴장 */}
       {left.length > 0 && (
-        <ParticipantGroup
-          title="퇴장"
-          count={left.length}
-          color="text-[var(--color-text-muted)]"
-        >
-          {left.map((p) => (
+        <ParticipantGroup title="퇴장" count={left.length} color="text-[var(--color-text-muted)]">
+          {left.map((participant) => (
             <ParticipantItem
-              key={p.memberId}
-              participant={p}
-              member={getMember(p.memberId)}
+              key={participant.memberId}
+              participant={participant}
+              member={getMember(participant.memberId)}
               dimmed
               actions={null}
             />
@@ -139,17 +138,15 @@ export function ParticipantsTab({ scheduleId, participants, getMember, onAddClic
         </ParticipantGroup>
       )}
 
-      {/* 빈 상태 */}
       {participants.length === 0 && (
-        <div className="text-center py-12 text-[var(--color-text-muted)]">
-          <p className="text-3xl mb-2">👥</p>
+        <div className="py-12 text-center text-[var(--color-text-muted)]">
+          <p className="mb-2 text-3xl">👥</p>
           <p className="text-sm">참여자가 없습니다</p>
-          <p className="text-xs mt-1">참여자를 추가하세요</p>
+          <p className="mt-1 text-xs">참여자를 추가하세요</p>
         </div>
       )}
 
-      {/* 퇴장 확인 다이얼로그 */}
-      {leaveTarget && (
+      {!readOnly && leaveTarget && (
         <ConfirmDialog
           title="퇴장 처리"
           message={`${leaveTargetMember?.name ?? ""}님을 퇴장 처리하시겠습니까?`}
@@ -179,10 +176,10 @@ function ParticipantGroup({
 }) {
   return (
     <div className="mb-4">
-      <p className={`text-xs font-semibold mb-2 ${color}`}>
+      <p className={`mb-2 text-xs font-semibold ${color}`}>
         {title} ({count}명)
       </p>
-      <div className="bg-white rounded-xl border border-[var(--color-border)] shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
         {children}
       </div>
     </div>
@@ -206,16 +203,18 @@ function ParticipantItem({
   const isMale = member.gender === "male";
 
   return (
-    <div className={`flex items-center px-3.5 py-3 border-b border-[#f4f7f9] last:border-b-0 ${dimmed ? "opacity-50" : ""}`}>
+    <div
+      className={`flex items-center border-b border-[#f4f7f9] px-3.5 py-3 last:border-b-0 ${dimmed ? "opacity-50" : ""}`}
+    >
       <div
-        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
+        className={`mr-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
           isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"
         }`}
       >
         {member.name.charAt(0)}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold truncate">{member.name}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">{member.name}</p>
         <p className="text-[11px] text-[var(--color-text-muted)]">
           {isMale ? "남" : "여"} · {levelInfo.display}
           {participant.gamesPlayed > 0 && ` · 게임 ${participant.gamesPlayed}회`}
@@ -241,10 +240,7 @@ function StatusButton({
       : "bg-red-50 text-[var(--color-danger)]";
 
   return (
-    <button
-      onClick={onClick}
-      className={`px-3 py-1.5 rounded-md text-[11px] font-semibold ${colorClass}`}
-    >
+    <button onClick={onClick} className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${colorClass}`}>
       {label}
     </button>
   );
