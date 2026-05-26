@@ -5,6 +5,7 @@ import { calculateScore } from "@/lib/level";
 import { scoreToLevelInfo } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Props {
   member: Member | null;
@@ -15,14 +16,17 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   onSavedContinue?: () => void;
+  onSavedName?: (name: string) => void;
+  manageHistory?: boolean;
   onLastValues?: (gender: Gender, grade: LevelGrade, subGrade: LevelSubGrade) => void;
 }
 
-export function MemberAddModal({ member, defaultName, defaultGender, defaultGrade, defaultSubGrade, onClose, onSaved, onSavedContinue, onLastValues }: Props) {
+export function MemberAddModal({ member, defaultName, defaultGender, defaultGrade, defaultSubGrade, onClose, onSaved, onSavedContinue, onSavedName, manageHistory = true, onLastValues }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
   const existingLevel = member ? scoreToLevelInfo(member.level) : null;
   const closedRef = useRef(false);
+  const confirmedDuplicateNameRef = useRef<string | null>(null);
 
   const [name, setName] = useState(member?.name ?? defaultName ?? "");
   const [gender, setGender] = useState<Gender>(member?.gender ?? defaultGender ?? "male");
@@ -33,6 +37,10 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
     existingLevel?.subGrade ?? defaultSubGrade ?? "중"
   );
   const [saving, setSaving] = useState(false);
+  const [duplicateConfirm, setDuplicateConfirm] = useState<{
+    continueAdding: boolean;
+    name: string;
+  } | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const dragging = useRef(false);
@@ -46,6 +54,8 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
 
   // 안드로이드 백버튼 대응
   useEffect(() => {
+    if (!manageHistory) return;
+
     window.history.pushState({ modal: true }, "");
 
     function handlePopState() {
@@ -56,12 +66,14 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [dismiss]);
+  }, [dismiss, manageHistory]);
 
   function closeModal() {
     if (closedRef.current) return;
     closedRef.current = true;
-    window.history.back();
+    if (manageHistory) {
+      window.history.back();
+    }
     onClose();
   }
 
@@ -109,11 +121,35 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
   const isEdit = member !== null;
 
   async function handleSubmit(continueAdding = false) {
-    if (!name.trim()) {
+    const trimmedName = name.trim();
+
+    if (!trimmedName) {
       showToast("이름을 입력하세요.");
       return;
     }
 
+    if (!isEdit && confirmedDuplicateNameRef.current !== trimmedName) {
+      setSaving(true);
+      try {
+        const duplicates = await memberRepository.searchByName(trimmedName);
+        const hasSameName = duplicates.some(
+          (duplicate) => duplicate.name.trim() === trimmedName
+        );
+
+        if (hasSameName) {
+          setDuplicateConfirm({ continueAdding, name: trimmedName });
+          return;
+        }
+      } catch (error) {
+        console.error("Duplicate member name check failed:", error);
+        showToast("이름 중복 확인에 실패했습니다.");
+        return;
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    confirmedDuplicateNameRef.current = null;
     setSaving(true);
     try {
       onLastValues?.(gender, grade, subGrade);
@@ -125,7 +161,9 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
         });
         if (!closedRef.current) {
           closedRef.current = true;
-          window.history.back();
+          if (manageHistory) {
+            window.history.back();
+          }
           onSaved();
         }
       } else {
@@ -134,13 +172,16 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
           gender,
           level: score,
         });
+        onSavedName?.(name.trim());
         if (continueAdding) {
           setName("");
           onSavedContinue?.();
         } else {
           if (!closedRef.current) {
             closedRef.current = true;
-            window.history.back();
+            if (manageHistory) {
+              window.history.back();
+            }
             onSaved();
           }
         }
@@ -288,6 +329,21 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
         </div>
 
       </div>
+      {duplicateConfirm && (
+        <ConfirmDialog
+          title="같은 이름의 모임원이 있습니다"
+          message={`'${duplicateConfirm.name}' 이름으로 등록된 모임원이 이미 있습니다. 그래도 등록하시겠습니까?`}
+          confirmLabel="등록"
+          cancelLabel="취소"
+          onCancel={() => setDuplicateConfirm(null)}
+          onConfirm={() => {
+            const pending = duplicateConfirm;
+            confirmedDuplicateNameRef.current = pending.name;
+            setDuplicateConfirm(null);
+            void handleSubmit(pending.continueAdding);
+          }}
+        />
+      )}
     </div>
   );
 }

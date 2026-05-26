@@ -11,16 +11,21 @@ interface Props {
   scheduleId: string;
   members: Member[];
   existingParticipants: Participant[];
+  searchQuery: string;
+  suspendHistoryClose?: boolean;
   onClose: () => void;
   onSaved: () => void;
   onAddMember: (name: string) => void;
+  onSearchQueryChange: (query: string) => void;
 }
 
-export function AddParticipantModal({ scheduleId, members, existingParticipants, onClose, onSaved, onAddMember }: Props) {
+export function AddParticipantModal({ scheduleId, members, existingParticipants, searchQuery, suspendHistoryClose = false, onClose, onSaved, onAddMember, onSearchQueryChange }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
-  const [searchQuery, setSearchQuery] = useState("");
   const closedRef = useRef(false);
+  const onSavedRef = useRef(onSaved);
+  const suspendHistoryCloseRef = useRef(suspendHistoryClose);
+  const ignoreHistoryCloseUntilRef = useRef(0);
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const dragging = useRef(false);
@@ -30,16 +35,30 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
     new Set(existingParticipants.filter((p) => p.status !== "left").map((p) => p.memberId))
   );
 
+  useEffect(() => {
+    onSavedRef.current = onSaved;
+    suspendHistoryCloseRef.current = suspendHistoryClose;
+    if (suspendHistoryClose) {
+      ignoreHistoryCloseUntilRef.current = Date.now() + 800;
+    }
+  });
+
   const dismiss = useCallback(() => {
     if (closedRef.current) return;
     closedRef.current = true;
-    onSaved();
-  }, [onSaved]);
+    onSavedRef.current();
+  }, []);
 
   useEffect(() => {
     window.history.pushState({ modal: true }, "");
 
     function handlePopState() {
+      if (
+        suspendHistoryCloseRef.current ||
+        Date.now() < ignoreHistoryCloseUntilRef.current
+      ) {
+        return;
+      }
       dismiss();
     }
 
@@ -53,7 +72,7 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
     if (closedRef.current) return;
     closedRef.current = true;
     window.history.back();
-    onSaved();
+    onSavedRef.current();
   }
 
   // 드래그 닫기
@@ -155,7 +174,7 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => onSearchQueryChange(e.target.value)}
           placeholder="이름으로 검색"
           className="w-full px-3.5 py-2.5 border border-[var(--color-border)] rounded-lg text-sm mb-4 focus:outline-none focus:border-[var(--color-primary)]"
           autoFocus
@@ -210,7 +229,6 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
             {searchQuery && (
               <button
                 onClick={() => {
-                  closeModal();
                   onAddMember(searchQuery);
                 }}
                 className="mt-3 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-semibold"
