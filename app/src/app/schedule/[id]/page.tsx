@@ -43,6 +43,7 @@ export default function ScheduleDetailPage() {
   const [showAutoMatch, setShowAutoMatch] = useState(false);
   const [showMemberAdd, setShowMemberAdd] = useState(false);
   const [memberAddName, setMemberAddName] = useState("");
+  const [participantSearchQuery, setParticipantSearchQuery] = useState("");
   const [priorities, setPriorities] = useState<MatchingPriority[]>([
     "games_per_hour",
     "avoid_repeat",
@@ -156,7 +157,10 @@ export default function ScheduleDetailPage() {
             scheduleId={scheduleId}
             participants={participants}
             getMember={getMember}
-            onAddClick={() => setShowAddParticipant(true)}
+            onAddClick={() => {
+              setParticipantSearchQuery("");
+              setShowAddParticipant(true);
+            }}
             onRefresh={loadData}
           />
         )}
@@ -182,16 +186,18 @@ export default function ScheduleDetailPage() {
           scheduleId={scheduleId}
           members={members}
           existingParticipants={participants}
+          searchQuery={participantSearchQuery}
+          suspendHistoryClose={showMemberAdd}
           onClose={() => setShowAddParticipant(false)}
           onSaved={() => {
             setShowAddParticipant(false);
             loadData();
           }}
           onAddMember={(name) => {
-            setShowAddParticipant(false);
             setMemberAddName(name);
             setShowMemberAdd(true);
           }}
+          onSearchQueryChange={setParticipantSearchQuery}
         />
       )}
 
@@ -235,7 +241,11 @@ export default function ScheduleDetailPage() {
         <MemberAddModal
           member={null}
           defaultName={memberAddName}
+          manageHistory={false}
           onClose={() => setShowMemberAdd(false)}
+          onSavedName={(savedName) => {
+            setParticipantSearchQuery(savedName);
+          }}
           onSaved={() => {
             setShowMemberAdd(false);
             loadData();
