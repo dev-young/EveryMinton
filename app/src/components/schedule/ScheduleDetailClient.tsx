@@ -208,17 +208,22 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
   }
 
   const dateDisplay = formatDateShort(schedule.date);
+  const titleDisplay = schedule.name || dateDisplay;
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-3 bg-gradient-to-r from-[#0066B3] to-[#004d8a] px-4 py-3.5 text-white">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {!isReadOnly && (
-            <button onClick={() => router.push("/")} className="text-lg" aria-label="뒤로가기">
+            <button
+              onClick={() => router.push("/")}
+              className="flex h-7 w-7 shrink-0 items-center justify-center text-lg leading-none"
+              aria-label="뒤로가기"
+            >
               ❮
             </button>
           )}
-          <h1 className="truncate text-base font-bold">{dateDisplay}</h1>
+          <h1 className="truncate text-base font-bold leading-7">{titleDisplay}</h1>
         </div>
 
         {!isReadOnly && (
@@ -335,7 +340,6 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
           editingGameId={editingGameId}
           onClose={() => setShowManualMatch(false)}
           onSaved={() => {
-            setShowManualMatch(false);
             loadData();
           }}
         />

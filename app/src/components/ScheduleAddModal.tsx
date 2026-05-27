@@ -39,6 +39,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
 
   const defaults = getDefaults();
 
+  const [name, setName] = useState(schedule?.name ?? "");
   const [date, setDate] = useState(schedule?.date ?? defaults.dateStr);
   const [startTime, setStartTime] = useState(schedule?.startTime ?? defaults.startStr);
   const [endTime, setEndTime] = useState(schedule?.endTime ?? defaults.endStr);
@@ -142,6 +143,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
     try {
       if (isEdit) {
         await scheduleRepository.update(schedule.id, {
+          name: name.trim(),
           date,
           startTime,
           endTime,
@@ -150,6 +152,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
         });
       } else {
         await scheduleRepository.create({
+          name: name.trim(),
           date,
           startTime,
           endTime,
@@ -199,6 +202,20 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
           >
             ✕
           </button>
+        </div>
+
+        {/* 이름 */}
+        <div className="mb-5">
+          <label className="block text-sm font-semibold text-[var(--color-text-secondary)] mb-2">
+            일정 이름
+          </label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="일정 이름을 입력하세요"
+            className="w-full px-3.5 py-3 border border-[var(--color-border)] rounded-lg text-sm focus:outline-none focus:border-[var(--color-primary)]"
+          />
         </div>
 
         {/* 날짜 */}

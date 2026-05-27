@@ -19,7 +19,13 @@ interface Props {
   onSaved: () => void;
 }
 
-export function ManualMatchModal({ scheduleId, schedule, participants, games, getMember, initialSelectedIds, editingGameId, onClose, onSaved }: Props) {
+type SelectedSlots = [string | null, string | null, string | null, string | null];
+
+function createSelectedSlots(ids: string[] = []): SelectedSlots {
+  return [ids[0] ?? null, ids[1] ?? null, ids[2] ?? null, ids[3] ?? null];
+}
+
+export function ManualMatchModal({ scheduleId, participants, games, getMember, initialSelectedIds, editingGameId, onClose, onSaved }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
   const closedRef = useRef(false);
@@ -28,8 +34,10 @@ export function ManualMatchModal({ scheduleId, schedule, participants, games, ge
   const dragging = useRef(false);
   const dragCurrentY = useRef(0);
 
-  const [selectedIds, setSelectedIds] = useState<string[]>(initialSelectedIds ?? []);
+  const [selectedIds, setSelectedIds] = useState<SelectedSlots>(() => createSelectedSlots(initialSelectedIds));
   const [filter, setFilter] = useState<"all" | "idle" | "gameWaiting" | "playing">(initialSelectedIds?.length ? "all" : "idle");
+  const selectedCount = selectedIds.filter((id): id is string => id !== null).length;
+  const firstEmptyIndex = selectedIds.findIndex((id) => id === null);
 
   // 대기중인 게임에 포함된 유저 ID
   const waitingGamePlayerIds = new Set(
@@ -119,15 +127,25 @@ export function ManualMatchModal({ scheduleId, schedule, participants, games, ge
     });
 
   function toggleSelect(memberId: string) {
-    if (selectedIds.includes(memberId)) {
-      setSelectedIds(selectedIds.filter((id) => id !== memberId));
-    } else if (selectedIds.length < 4) {
-      setSelectedIds([...selectedIds, memberId]);
+    const selectedIndex = selectedIds.indexOf(memberId);
+    if (selectedIndex >= 0) {
+      setSelectedIds((current) => current.map((id, index) => (index === selectedIndex ? null : id)) as SelectedSlots);
+      return;
+    }
+
+    if (firstEmptyIndex >= 0) {
+      setSelectedIds((current) => current.map((id, index) => (index === firstEmptyIndex ? memberId : id)) as SelectedSlots);
     }
   }
 
+  function removeSlot(index: number) {
+    setSelectedIds((current) => current.map((id, currentIndex) => (currentIndex === index ? null : id)) as SelectedSlots);
+  }
+
   async function createGame() {
-    if (selectedIds.length !== 4) {
+    const filledIds = selectedIds.filter((id): id is string => id !== null);
+
+    if (filledIds.length !== 4) {
       showToast("4명을 선택해주세요.");
       return;
     }
@@ -136,24 +154,26 @@ export function ManualMatchModal({ scheduleId, schedule, participants, games, ge
       if (editingGameId) {
         // 기존 게임 업데이트
         await gameRepository.update(scheduleId, editingGameId, {
-          team1: [selectedIds[0], selectedIds[1]] as [string, string],
-          team2: [selectedIds[2], selectedIds[3]] as [string, string],
+          team1: [filledIds[0], filledIds[1]] as [string, string],
+          team2: [filledIds[2], filledIds[3]] as [string, string],
         });
       } else {
         // 새 게임 생성
         await gameRepository.create(scheduleId, {
           courtNumber: 0,
           status: "waiting",
-          team1: [selectedIds[0], selectedIds[1]] as [string, string],
-          team2: [selectedIds[2], selectedIds[3]] as [string, string],
+          team1: [filledIds[0], filledIds[1]] as [string, string],
+          team2: [filledIds[2], filledIds[3]] as [string, string],
           startedAt: null,
           endedAt: null,
         });
       }
 
-      if (!closedRef.current) {
-        closedRef.current = true;
-        window.history.back();
+      if (editingGameId) {
+        closeModal();
+        onSaved();
+      } else {
+        setSelectedIds(createSelectedSlots());
         onSaved();
       }
     } catch (error) {
@@ -196,16 +216,16 @@ export function ManualMatchModal({ scheduleId, schedule, participants, games, ge
               <div className="flex-1">
                 <p className="text-[10px] font-semibold text-[var(--color-primary)] mb-1.5">팀 A</p>
                 <div className="flex gap-1.5">
-                  <Slot member={slots[0]} index={0} isNext={selectedIds.length === 0} onRemove={() => setSelectedIds(selectedIds.filter((_, i) => i !== 0))} />
-                  <Slot member={slots[1]} index={1} isNext={selectedIds.length === 1} onRemove={() => setSelectedIds(selectedIds.filter((_, i) => i !== 1))} />
+                  <Slot member={slots[0]} index={0} isNext={firstEmptyIndex === 0} onRemove={() => removeSlot(0)} />
+                  <Slot member={slots[1]} index={1} isNext={firstEmptyIndex === 1} onRemove={() => removeSlot(1)} />
                 </div>
               </div>
               <span className="text-xs font-bold text-[var(--color-text-muted)]">VS</span>
               <div className="flex-1">
                 <p className="text-[10px] font-semibold text-[var(--color-accent)] mb-1.5">팀 B</p>
                 <div className="flex gap-1.5">
-                  <Slot member={slots[2]} index={2} isNext={selectedIds.length === 2} onRemove={() => setSelectedIds(selectedIds.filter((_, i) => i !== 2))} />
-                  <Slot member={slots[3]} index={3} isNext={selectedIds.length === 3} onRemove={() => setSelectedIds(selectedIds.filter((_, i) => i !== 3))} />
+                  <Slot member={slots[2]} index={2} isNext={firstEmptyIndex === 2} onRemove={() => removeSlot(2)} />
+                  <Slot member={slots[3]} index={3} isNext={firstEmptyIndex === 3} onRemove={() => removeSlot(3)} />
                 </div>
               </div>
             </div>
@@ -222,64 +242,70 @@ export function ManualMatchModal({ scheduleId, schedule, participants, games, ge
 
         {/* 참여자 목록 */}
         <div className="flex-1 overflow-y-auto px-6 pb-4">
-          <div className="grid grid-cols-2 gap-2">
-            {selectableParticipants.map((p) => {
-              const member = getMember(p.memberId);
-              if (!member) return null;
-              const isSelected = selectedIds.includes(p.memberId);
-              const isMale = member.gender === "male";
-              const levelInfo = scoreToLevelInfo(member.level);
-              const isInWaitingGame = waitingGamePlayerIds.has(p.memberId);
+          {selectableParticipants.length === 0 ? (
+            <div className="flex h-full min-h-32 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-white px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+              조건에 맞는 참여자가 없습니다.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              {selectableParticipants.map((p) => {
+                const member = getMember(p.memberId);
+                if (!member) return null;
+                const isSelected = selectedIds.includes(p.memberId);
+                const isMale = member.gender === "male";
+                const levelInfo = scoreToLevelInfo(member.level);
+                const isInWaitingGame = waitingGamePlayerIds.has(p.memberId);
 
-              return (
-                <button
-                  key={p.memberId}
-                  onClick={() => toggleSelect(p.memberId)}
-                  className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-colors ${
-                    isSelected
-                      ? isMale
-                        ? "border-[var(--color-primary)] bg-blue-50"
-                        : "border-pink-400 bg-pink-50"
-                      : "border-[var(--color-border)] bg-white"
-                  } ${!isSelected && selectedIds.length >= 4 ? "opacity-40" : ""}`}
-                  disabled={!isSelected && selectedIds.length >= 4}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${
-                      isMale ? "text-[var(--color-primary)]" : "text-pink-600"
-                    }`}>{member.name}</p>
-                    <p className="text-[12px] text-[var(--color-text-muted)]">
-                      {levelInfo.display}
-                      {p.status === "playing" && <span className="text-[var(--color-accent)]"> · 게임중</span>}
-                      {isInWaitingGame && <span className="text-amber-600"> · 게임 대기중</span>}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[13px] font-bold text-[var(--color-primary)]">
-                      {calculateGPH(p).toFixed(1)}/h
-                    </span>
-                    {p.status !== "playing" && (
+                return (
+                  <button
+                    key={p.memberId}
+                    onClick={() => toggleSelect(p.memberId)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-colors ${
+                      isSelected
+                        ? isMale
+                          ? "border-[var(--color-primary)] bg-blue-50"
+                          : "border-pink-400 bg-pink-50"
+                        : "border-[var(--color-border)] bg-white"
+                    } ${!isSelected && selectedCount >= 4 ? "opacity-40" : ""}`}
+                    disabled={!isSelected && selectedCount >= 4}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold truncate ${
+                        isMale ? "text-[var(--color-primary)]" : "text-pink-600"
+                      }`}>{member.name}</p>
                       <p className="text-[12px] text-[var(--color-text-muted)]">
-                        대기 {calculateWaitMinutes(p)}분
+                        {levelInfo.display}
+                        {p.status === "playing" && <span className="text-[var(--color-accent)]"> · 게임중</span>}
+                        {isInWaitingGame && <span className="text-amber-600"> · 게임 대기중</span>}
                       </p>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[13px] font-bold text-[var(--color-primary)]">
+                        {calculateGPH(p).toFixed(1)}/h
+                      </span>
+                      {p.status !== "playing" && (
+                        <p className="text-[12px] text-[var(--color-text-muted)]">
+                          대기 {calculateWaitMinutes(p)}분
+                        </p>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* 하단 버튼 */}
         <div className="px-6 py-4 border-t border-[var(--color-border)]">
           <button
             onClick={createGame}
-            disabled={selectedIds.length !== 4}
+            disabled={selectedCount !== 4}
             className="w-full py-4 bg-[var(--color-accent)] text-white rounded-xl text-sm font-bold disabled:bg-gray-300 disabled:cursor-not-allowed active:bg-[var(--color-accent-dark)]"
           >
-            {selectedIds.length === 4
+            {selectedCount === 4
               ? (editingGameId ? "게임 수정" : "게임 생성")
-              : `${editingGameId ? "게임 수정" : "게임 생성"} (${selectedIds.length}/4명 선택)`}
+              : `${editingGameId ? "게임 수정" : "게임 생성"} (${selectedCount}/4명 선택)`}
           </button>
         </div>
       </div>

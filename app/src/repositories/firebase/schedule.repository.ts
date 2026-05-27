@@ -64,6 +64,7 @@ export class FirebaseScheduleRepository implements ScheduleRepository {
   private toSchedule(id: string, data: Record<string, unknown>): Schedule {
     return {
       id,
+      name: typeof data.name === "string" ? data.name : "",
       date: data.date as string,
       startTime: data.startTime as string,
       endTime: data.endTime as string,
