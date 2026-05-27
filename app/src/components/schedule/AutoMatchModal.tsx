@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Schedule, Participant, Member, Game, MatchingPriority } from "@/types";
 import { gameRepository } from "@/repositories";
 import { generateMatches } from "@/lib/matching";
@@ -49,11 +49,14 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
   const [gameCount, setGameCount] = useState(Math.max(1, Math.floor(idleCount / 4)));
 
   const [saving, setSaving] = useState(false);
-  const [preview, setPreview] = useState<{ team1: [string, string]; team2: [string, string] }[]>(() =>
-    generateMatches(participants, members, games, priorities, {
-      includePlayingMembers,
-      gameCount,
-    })
+  const [preview, setPreview] = useState<{ team1: [string, string]; team2: [string, string] }[]>([]);
+  const memberMap = useMemo(
+    () => new Map(members.map((member) => [member.id, member])),
+    [members]
+  );
+  const participantMap = useMemo(
+    () => new Map(participants.map((participant) => [participant.memberId, participant])),
+    [participants]
   );
 
   const dismiss = useCallback(() => {
@@ -130,11 +133,11 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
   }, [generatePreview]);
 
   function getMember(id: string): Member | undefined {
-    return members.find((m) => m.id === id);
+    return memberMap.get(id);
   }
 
   function getParticipant(id: string): Participant | undefined {
-    return participants.find((p) => p.memberId === id);
+    return participantMap.get(id);
   }
 
   function getGPH(id: string): string {
@@ -154,16 +157,17 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
 
     setSaving(true);
     try {
-      for (const match of preview) {
-        await gameRepository.create(scheduleId, {
+      await gameRepository.createMany(
+        scheduleId,
+        preview.map((match) => ({
           courtNumber: 0,
           status: "waiting",
           team1: match.team1,
           team2: match.team2,
           startedAt: null,
           endedAt: null,
-        });
-      }
+        }))
+      );
 
       if (!closedRef.current) {
         closedRef.current = true;

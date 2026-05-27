@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Game, Member, MatchingPriority, Participant, Schedule } from "@/types";
 import { gameRepository, memberRepository, participantRepository, scheduleRepository } from "@/repositories";
@@ -45,10 +45,7 @@ async function getVisibleMembers(participants: Participant[], games: Game[]): Pr
     [...game.team1, ...game.team2].forEach((memberId) => memberIds.add(memberId));
   });
 
-  const members = await Promise.all([...memberIds].map((memberId) => memberRepository.getById(memberId)));
-  return members
-    .filter((member): member is Member => member !== null)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return memberRepository.getByIds([...memberIds]);
 }
 
 async function fetchScheduleDetailData(scheduleId: string, isReadOnly: boolean): Promise<ScheduleDetailData> {
@@ -174,9 +171,15 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
     };
   }, [applyData, isReadOnly, scheduleId]);
 
-  function getMember(memberId: string): Member | undefined {
-    return members.find((member) => member.id === memberId);
-  }
+  const memberMap = useMemo(
+    () => new Map(members.map((member) => [member.id, member])),
+    [members]
+  );
+
+  const getMember = useCallback(
+    (memberId: string): Member | undefined => memberMap.get(memberId),
+    [memberMap]
+  );
 
   async function copyShareLink() {
     try {

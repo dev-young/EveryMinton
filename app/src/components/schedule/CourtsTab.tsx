@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Schedule, Game, Participant, Member } from "@/types";
 import { gameRepository, participantRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
@@ -42,19 +42,24 @@ export function CourtsTab({
     return () => clearInterval(interval);
   }, []);
 
+  const participantMap = useMemo(
+    () => new Map(participants.map((participant) => [participant.memberId, participant])),
+    [participants]
+  );
+
   const inProgressGames = games.filter((game) => game.status === "in_progress");
   const waitingGames = games
     .filter((game) => game.status === "waiting")
     .sort((a, b) => {
       const aMinGph = Math.min(
         ...[...a.team1, ...a.team2].map((id) => {
-          const participant = participants.find((item) => item.memberId === id);
+          const participant = participantMap.get(id);
           return participant ? calculateGPH(participant) : Infinity;
         })
       );
       const bMinGph = Math.min(
         ...[...b.team1, ...b.team2].map((id) => {
-          const participant = participants.find((item) => item.memberId === id);
+          const participant = participantMap.get(id);
           return participant ? calculateGPH(participant) : Infinity;
         })
       );
@@ -92,9 +97,13 @@ export function CourtsTab({
         startedAt: new Date(),
       });
 
-      for (const memberId of [...game.team1, ...game.team2]) {
-        await participantRepository.update(scheduleId, memberId, { status: "playing" });
-      }
+      await participantRepository.updateMany(
+        scheduleId,
+        [...game.team1, ...game.team2].map((memberId) => ({
+          memberId,
+          data: { status: "playing" },
+        }))
+      );
 
       onRefresh?.();
     } catch (error) {
@@ -114,14 +123,20 @@ export function CourtsTab({
         endedAt: now,
       });
 
-      for (const memberId of [...game.team1, ...game.team2]) {
-        const participant = participants.find((item) => item.memberId === memberId);
-        await participantRepository.update(scheduleId, memberId, {
-          status: "waiting",
-          gamesPlayed: (participant?.gamesPlayed ?? 0) + 1,
-          lastGameEndedAt: now,
-        });
-      }
+      await participantRepository.updateMany(
+        scheduleId,
+        [...game.team1, ...game.team2].map((memberId) => {
+          const participant = participantMap.get(memberId);
+          return {
+            memberId,
+            data: {
+              status: "waiting",
+              gamesPlayed: (participant?.gamesPlayed ?? 0) + 1,
+              lastGameEndedAt: now,
+            },
+          };
+        })
+      );
 
       setEndingGameId(null);
       onRefresh?.();
@@ -143,9 +158,13 @@ export function CourtsTab({
         startedAt: null,
       });
 
-      for (const memberId of [...game.team1, ...game.team2]) {
-        await participantRepository.update(scheduleId, memberId, { status: "waiting" });
-      }
+      await participantRepository.updateMany(
+        scheduleId,
+        [...game.team1, ...game.team2].map((memberId) => ({
+          memberId,
+          data: { status: "waiting" },
+        }))
+      );
 
       setCancellingGameId(null);
       onRefresh?.();
@@ -254,7 +273,7 @@ export function CourtsTab({
           {waitingGames.map((game) => {
             const playerIds = [...game.team1, ...game.team2];
             const hasPlayingMember = playerIds.some((id) => {
-              const participant = participants.find((item) => item.memberId === id);
+              const participant = participantMap.get(id);
               return participant?.status === "playing";
             });
             const canStart = emptyCourts > 0 && !hasPlayingMember;
@@ -302,7 +321,7 @@ export function CourtsTab({
                           <PlayerChipDetail
                             key={id}
                             member={getMember(id)}
-                            participant={participants.find((participant) => participant.memberId === id)}
+                            participant={participantMap.get(id)}
                             fill={readOnly}
                           />
                         ))}
@@ -313,7 +332,7 @@ export function CourtsTab({
                           <PlayerChipDetail
                             key={id}
                             member={getMember(id)}
-                            participant={participants.find((participant) => participant.memberId === id)}
+                            participant={participantMap.get(id)}
                             fill={readOnly}
                           />
                         ))}
