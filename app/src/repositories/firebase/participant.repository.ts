@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -45,31 +46,44 @@ export class FirebaseParticipantRepository implements ParticipantRepository {
     await setDoc(docRef, this.toFirestore(participant));
   }
 
+  async addMany(scheduleId: string, participants: Participant[]): Promise<void> {
+    if (participants.length === 0) return;
+
+    const batch = writeBatch(db);
+    participants.forEach((participant) => {
+      const docRef = doc(
+        db,
+        "schedules",
+        scheduleId,
+        "participants",
+        participant.memberId
+      );
+      batch.set(docRef, this.toFirestore(participant));
+    });
+    await batch.commit();
+  }
+
   async update(
     scheduleId: string,
     memberId: string,
     data: Partial<Participant>
   ): Promise<void> {
     const docRef = doc(db, "schedules", scheduleId, "participants", memberId);
-    const firestoreData: Record<string, unknown> = {};
+    await updateDoc(docRef, this.toFirestoreUpdate(data));
+  }
 
-    if (data.status !== undefined) firestoreData.status = data.status;
-    if (data.gamesPlayed !== undefined)
-      firestoreData.gamesPlayed = data.gamesPlayed;
-    if (data.joinedAt !== undefined)
-      firestoreData.joinedAt = data.joinedAt
-        ? Timestamp.fromDate(data.joinedAt)
-        : null;
-    if (data.leftAt !== undefined)
-      firestoreData.leftAt = data.leftAt
-        ? Timestamp.fromDate(data.leftAt)
-        : null;
-    if (data.lastGameEndedAt !== undefined)
-      firestoreData.lastGameEndedAt = data.lastGameEndedAt
-        ? Timestamp.fromDate(data.lastGameEndedAt)
-        : null;
+  async updateMany(
+    scheduleId: string,
+    updates: { memberId: string; data: Partial<Participant> }[]
+  ): Promise<void> {
+    if (updates.length === 0) return;
 
-    await updateDoc(docRef, firestoreData);
+    const batch = writeBatch(db);
+    updates.forEach(({ memberId, data }) => {
+      const docRef = doc(db, "schedules", scheduleId, "participants", memberId);
+      batch.update(docRef, this.toFirestoreUpdate(data));
+    });
+    await batch.commit();
   }
 
   async remove(scheduleId: string, memberId: string): Promise<void> {
@@ -106,5 +120,27 @@ export class FirebaseParticipantRepository implements ParticipantRepository {
         ? Timestamp.fromDate(participant.lastGameEndedAt)
         : null,
     };
+  }
+
+  private toFirestoreUpdate(data: Partial<Participant>): Record<string, unknown> {
+    const firestoreData: Record<string, unknown> = {};
+
+    if (data.status !== undefined) firestoreData.status = data.status;
+    if (data.gamesPlayed !== undefined)
+      firestoreData.gamesPlayed = data.gamesPlayed;
+    if (data.joinedAt !== undefined)
+      firestoreData.joinedAt = data.joinedAt
+        ? Timestamp.fromDate(data.joinedAt)
+        : null;
+    if (data.leftAt !== undefined)
+      firestoreData.leftAt = data.leftAt
+        ? Timestamp.fromDate(data.leftAt)
+        : null;
+    if (data.lastGameEndedAt !== undefined)
+      firestoreData.lastGameEndedAt = data.lastGameEndedAt
+        ? Timestamp.fromDate(data.lastGameEndedAt)
+        : null;
+
+    return firestoreData;
   }
 }

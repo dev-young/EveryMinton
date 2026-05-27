@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  writeBatch,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -34,15 +35,28 @@ export class FirebaseGameRepository implements GameRepository {
   }
 
   async create(scheduleId: string, game: Omit<Game, "id">): Promise<Game> {
-    const docRef = await addDoc(this.getRef(scheduleId), {
-      ...game,
-      startedAt: game.startedAt ? Timestamp.fromDate(game.startedAt) : null,
-      endedAt: game.endedAt ? Timestamp.fromDate(game.endedAt) : null,
-    });
+    const docRef = await addDoc(this.getRef(scheduleId), this.toFirestore(game));
     return {
       id: docRef.id,
       ...game,
     };
+  }
+
+  async createMany(scheduleId: string, games: Omit<Game, "id">[]): Promise<Game[]> {
+    if (games.length === 0) return [];
+
+    const batch = writeBatch(db);
+    const createdGames = games.map((game) => {
+      const docRef = doc(this.getRef(scheduleId));
+      batch.set(docRef, this.toFirestore(game));
+      return {
+        id: docRef.id,
+        ...game,
+      };
+    });
+
+    await batch.commit();
+    return createdGames;
   }
 
   async update(
@@ -51,23 +65,7 @@ export class FirebaseGameRepository implements GameRepository {
     data: Partial<Omit<Game, "id">>
   ): Promise<void> {
     const docRef = doc(db, "schedules", scheduleId, "games", gameId);
-    const firestoreData: Record<string, unknown> = {};
-
-    if (data.status !== undefined) firestoreData.status = data.status;
-    if (data.courtNumber !== undefined)
-      firestoreData.courtNumber = data.courtNumber;
-    if (data.team1 !== undefined) firestoreData.team1 = data.team1;
-    if (data.team2 !== undefined) firestoreData.team2 = data.team2;
-    if (data.startedAt !== undefined)
-      firestoreData.startedAt = data.startedAt
-        ? Timestamp.fromDate(data.startedAt)
-        : null;
-    if (data.endedAt !== undefined)
-      firestoreData.endedAt = data.endedAt
-        ? Timestamp.fromDate(data.endedAt)
-        : null;
-
-    await updateDoc(docRef, firestoreData);
+    await updateDoc(docRef, this.toFirestoreUpdate(data));
   }
 
   async delete(scheduleId: string, gameId: string): Promise<void> {
@@ -94,5 +92,33 @@ export class FirebaseGameRepository implements GameRepository {
       startedAt: (data.startedAt as Timestamp)?.toDate() ?? null,
       endedAt: (data.endedAt as Timestamp)?.toDate() ?? null,
     };
+  }
+
+  private toFirestore(game: Omit<Game, "id">): Record<string, unknown> {
+    return {
+      ...game,
+      startedAt: game.startedAt ? Timestamp.fromDate(game.startedAt) : null,
+      endedAt: game.endedAt ? Timestamp.fromDate(game.endedAt) : null,
+    };
+  }
+
+  private toFirestoreUpdate(data: Partial<Omit<Game, "id">>): Record<string, unknown> {
+    const firestoreData: Record<string, unknown> = {};
+
+    if (data.status !== undefined) firestoreData.status = data.status;
+    if (data.courtNumber !== undefined)
+      firestoreData.courtNumber = data.courtNumber;
+    if (data.team1 !== undefined) firestoreData.team1 = data.team1;
+    if (data.team2 !== undefined) firestoreData.team2 = data.team2;
+    if (data.startedAt !== undefined)
+      firestoreData.startedAt = data.startedAt
+        ? Timestamp.fromDate(data.startedAt)
+        : null;
+    if (data.endedAt !== undefined)
+      firestoreData.endedAt = data.endedAt
+        ? Timestamp.fromDate(data.endedAt)
+        : null;
+
+    return firestoreData;
   }
 }
