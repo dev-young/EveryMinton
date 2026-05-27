@@ -51,6 +51,7 @@ export function ScheduleInfoTab({ schedule, participantCount, gameCount, readOnl
   return (
     <div>
       <div className="mb-4 rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
+        <InfoRow label="이름" value={schedule.name || "미정"} />
         <InfoRow label="날짜" value={formatDate(schedule.date)} />
         <InfoRow label="시간" value={`${schedule.startTime} ~ ${schedule.endTime}`} />
         <InfoRow label="장소" value={schedule.location || "미정"} />

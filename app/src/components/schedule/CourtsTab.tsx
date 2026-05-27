@@ -168,6 +168,7 @@ export function CourtsTab({
   }
 
   const emptyCourts = courts.filter((game) => game === null).length;
+  const endingGame = endingGameId ? games.find((game) => game.id === endingGameId) : null;
 
   return (
     <div className="pb-20">
@@ -365,7 +366,7 @@ export function CourtsTab({
       {endingGameId && (
         <ConfirmDialog
           title="게임 종료"
-          message="이 게임을 종료하시겠습니까?"
+          message={`코트${endingGame?.courtNumber ?? ""} 경기를 종료하시겠습니까?`}
           confirmLabel="종료"
           danger
           onCancel={() => setEndingGameId(null)}
