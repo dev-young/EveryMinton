@@ -36,7 +36,9 @@ firebase-debug.*.log*
 .dataconnect/
 **/.dataconnect/
 
+# Codex local workspace files
+.codex/
+
 # Obsidian vault metadata
 .obsidian/
 **/.obsidian/
-
