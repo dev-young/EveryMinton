@@ -20,6 +20,7 @@ export type ScheduleStatus = "upcoming" | "in_progress" | "completed";
 // 일정
 export interface Schedule {
   id: string;
+  name?: string;
   date: string; // "2025-01-15"
   startTime: string; // "19:00"
   endTime: string; // "22:00"

@@ -9,6 +9,7 @@ import {
   query,
   where,
   orderBy,
+  documentId,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -33,6 +34,28 @@ export class FirebaseMemberRepository implements MemberRepository {
     const snapshot = await getDoc(docRef);
     if (!snapshot.exists()) return null;
     return this.toMember(snapshot.id, snapshot.data());
+  }
+
+  async getByIds(ids: string[]): Promise<Member[]> {
+    const uniqueIds = [...new Set(ids)].filter(Boolean);
+    if (uniqueIds.length === 0) return [];
+
+    const chunks: string[][] = [];
+    for (let index = 0; index < uniqueIds.length; index += 30) {
+      chunks.push(uniqueIds.slice(index, index + 30));
+    }
+
+    const snapshots = await Promise.all(
+      chunks.map((chunk) =>
+        getDocs(query(this.ref, where(documentId(), "in", chunk)))
+      )
+    );
+
+    return snapshots
+      .flatMap((snapshot) =>
+        snapshot.docs.map((doc) => this.toMember(doc.id, doc.data()))
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async create(member: Omit<Member, "id" | "createdAt">): Promise<Member> {
@@ -61,10 +84,9 @@ export class FirebaseMemberRepository implements MemberRepository {
   }
 
   async searchByName(name: string): Promise<Member[]> {
-    // Firestore는 부분 문자열 검색을 지원하지 않으므로
-    // 전체를 가져와서 클라이언트에서 필터링
-    const all = await this.getAll();
-    return all.filter((m) => m.name.includes(name));
+    const q = query(this.ref, where("name", "==", name));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => this.toMember(doc.id, doc.data()));
   }
 
   private toMember(id: string, data: Record<string, unknown>): Member {

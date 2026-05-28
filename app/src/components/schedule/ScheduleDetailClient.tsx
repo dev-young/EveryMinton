@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Game, Member, MatchingPriority, Participant, Schedule } from "@/types";
 import { gameRepository, memberRepository, participantRepository, scheduleRepository } from "@/repositories";
@@ -45,10 +45,7 @@ async function getVisibleMembers(participants: Participant[], games: Game[]): Pr
     [...game.team1, ...game.team2].forEach((memberId) => memberIds.add(memberId));
   });
 
-  const members = await Promise.all([...memberIds].map((memberId) => memberRepository.getById(memberId)));
-  return members
-    .filter((member): member is Member => member !== null)
-    .sort((a, b) => a.name.localeCompare(b.name));
+  return memberRepository.getByIds([...memberIds]);
 }
 
 async function fetchScheduleDetailData(scheduleId: string, isReadOnly: boolean): Promise<ScheduleDetailData> {
@@ -174,9 +171,15 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
     };
   }, [applyData, isReadOnly, scheduleId]);
 
-  function getMember(memberId: string): Member | undefined {
-    return members.find((member) => member.id === memberId);
-  }
+  const memberMap = useMemo(
+    () => new Map(members.map((member) => [member.id, member])),
+    [members]
+  );
+
+  const getMember = useCallback(
+    (memberId: string): Member | undefined => memberMap.get(memberId),
+    [memberMap]
+  );
 
   async function copyShareLink() {
     try {
@@ -208,17 +211,22 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
   }
 
   const dateDisplay = formatDateShort(schedule.date);
+  const titleDisplay = schedule.name || dateDisplay;
 
   return (
     <div className="flex min-h-screen flex-col">
       <header className="flex items-center gap-3 bg-gradient-to-r from-[#0066B3] to-[#004d8a] px-4 py-3.5 text-white">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           {!isReadOnly && (
-            <button onClick={() => router.push("/")} className="text-lg" aria-label="뒤로가기">
+            <button
+              onClick={() => router.push("/")}
+              className="flex h-7 w-7 shrink-0 items-center justify-center text-lg leading-none"
+              aria-label="뒤로가기"
+            >
               ❮
             </button>
           )}
-          <h1 className="truncate text-base font-bold">{dateDisplay}</h1>
+          <h1 className="truncate text-base font-bold leading-7">{titleDisplay}</h1>
         </div>
 
         {!isReadOnly && (
@@ -335,7 +343,6 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
           editingGameId={editingGameId}
           onClose={() => setShowManualMatch(false)}
           onSaved={() => {
-            setShowManualMatch(false);
             loadData();
           }}
         />

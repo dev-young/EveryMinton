@@ -7,6 +7,7 @@ import { Member, Schedule, Participant, Game } from "@/types";
 export interface MemberRepository {
   getAll(): Promise<Member[]>;
   getById(id: string): Promise<Member | null>;
+  getByIds(ids: string[]): Promise<Member[]>;
   create(member: Omit<Member, "id" | "createdAt">): Promise<Member>;
   update(id: string, data: Partial<Omit<Member, "id" | "createdAt">>): Promise<void>;
   delete(id: string): Promise<void>;
@@ -31,10 +32,15 @@ export interface ParticipantRepository {
   getAll(scheduleId: string): Promise<Participant[]>;
   get(scheduleId: string, memberId: string): Promise<Participant | null>;
   add(scheduleId: string, participant: Participant): Promise<void>;
+  addMany(scheduleId: string, participants: Participant[]): Promise<void>;
   update(
     scheduleId: string,
     memberId: string,
     data: Partial<Participant>
+  ): Promise<void>;
+  updateMany(
+    scheduleId: string,
+    updates: { memberId: string; data: Partial<Participant> }[]
   ): Promise<void>;
   remove(scheduleId: string, memberId: string): Promise<void>;
 }
@@ -46,6 +52,7 @@ export interface GameRepository {
   getAll(scheduleId: string): Promise<Game[]>;
   getById(scheduleId: string, gameId: string): Promise<Game | null>;
   create(scheduleId: string, game: Omit<Game, "id">): Promise<Game>;
+  createMany(scheduleId: string, games: Omit<Game, "id">[]): Promise<Game[]>;
   update(
     scheduleId: string,
     gameId: string,

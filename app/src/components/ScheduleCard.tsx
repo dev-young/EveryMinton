@@ -30,8 +30,15 @@ export function ScheduleCard({ schedule }: Props) {
     <div
       className={`bg-white rounded-xl p-4 border border-[var(--color-border)] border-l-4 ${status.border} shadow-sm active:scale-[0.98] transition-transform`}
     >
-      <div className="flex justify-between items-center mb-2.5">
-        <span className="text-[15px] font-bold">{formatDate(schedule.date)}</span>
+      <div className="flex justify-between items-start gap-3 mb-2.5">
+        <div className="min-w-0">
+          <p className="text-[15px] font-bold">{formatDate(schedule.date)}</p>
+          {schedule.name && (
+            <p className="mt-1 truncate text-[13px] font-semibold text-[var(--color-text-secondary)]">
+              {schedule.name}
+            </p>
+          )}
+        </div>
         <span className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${status.color}`}>
           {schedule.status === "in_progress" && "● "}{status.label}
         </span>
@@ -42,11 +49,6 @@ export function ScheduleCard({ schedule }: Props) {
         </div>
         <div className="flex items-center gap-1.5">
           <span>🕐</span> {schedule.startTime} ~ {schedule.endTime}
-        </div>
-      </div>
-      <div className="flex gap-4 mt-2.5 pt-2.5 border-t border-[#f4f7f9]">
-        <div className="text-xs text-[var(--color-text-muted)]">
-          코트 <span className="font-semibold text-[var(--color-text)]">{schedule.courtCount}면</span>
         </div>
       </div>
     </div>
