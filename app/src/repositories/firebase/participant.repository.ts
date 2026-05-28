@@ -6,6 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   Timestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -43,6 +44,23 @@ export class FirebaseParticipantRepository implements ParticipantRepository {
       participant.memberId
     );
     await setDoc(docRef, this.toFirestore(participant));
+  }
+
+  async addMany(scheduleId: string, participants: Participant[]): Promise<void> {
+    if (participants.length === 0) return;
+
+    const batch = writeBatch(db);
+    participants.forEach((participant) => {
+      const docRef = doc(
+        db,
+        "schedules",
+        scheduleId,
+        "participants",
+        participant.memberId
+      );
+      batch.set(docRef, this.toFirestore(participant));
+    });
+    await batch.commit();
   }
 
   async update(

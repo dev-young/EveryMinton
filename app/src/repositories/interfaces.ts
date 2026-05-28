@@ -31,6 +31,7 @@ export interface ParticipantRepository {
   getAll(scheduleId: string): Promise<Participant[]>;
   get(scheduleId: string, memberId: string): Promise<Participant | null>;
   add(scheduleId: string, participant: Participant): Promise<void>;
+  addMany(scheduleId: string, participants: Participant[]): Promise<void>;
   update(
     scheduleId: string,
     memberId: string,

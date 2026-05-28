@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Member, Participant } from "@/types";
 import { participantRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
@@ -13,27 +13,50 @@ interface Props {
   existingParticipants: Participant[];
   searchQuery: string;
   suspendHistoryClose?: boolean;
-  onClose: () => void;
   onSaved: () => void;
   onAddMember: (name: string) => void;
   onSearchQueryChange: (query: string) => void;
 }
 
-export function AddParticipantModal({ scheduleId, members, existingParticipants, searchQuery, suspendHistoryClose = false, onClose, onSaved, onAddMember, onSearchQueryChange }: Props) {
+const SEARCH_SPLIT_REGEX = /[\s,，.。、;；/\\|]+/;
+
+function createParticipant(memberId: string): Participant {
+  return {
+    memberId,
+    status: "registered",
+    joinedAt: null,
+    leftAt: null,
+    gamesPlayed: 0,
+    lastGameEndedAt: null,
+  };
+}
+
+function getSearchTerms(query: string): string[] {
+  return query
+    .split(SEARCH_SPLIT_REGEX)
+    .map((term) => term.trim())
+    .filter(Boolean);
+}
+
+function resolveSearchTerms(query: string, members: Member[]): string[] {
+  return getSearchTerms(query).map((term) => {
+    const hasDirectMatch = members.some((member) => member.name.includes(term));
+    return term.length === 3 && !hasDirectMatch ? term.slice(-2) : term;
+  });
+}
+
+export function AddParticipantModal({ scheduleId, members, existingParticipants, searchQuery, suspendHistoryClose = false, onSaved, onAddMember, onSearchQueryChange }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
   const closedRef = useRef(false);
   const onSavedRef = useRef(onSaved);
   const suspendHistoryCloseRef = useRef(suspendHistoryClose);
   const ignoreHistoryCloseUntilRef = useRef(0);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const dragStartY = useRef(0);
-  const dragging = useRef(false);
-  const dragCurrentY = useRef(0);
 
   const [addedIds, setAddedIds] = useState<Set<string>>(
     new Set(existingParticipants.filter((p) => p.status !== "left").map((p) => p.memberId))
   );
+  const [addingAll, setAddingAll] = useState(false);
 
   useEffect(() => {
     onSavedRef.current = onSaved;
@@ -75,58 +98,9 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
     onSavedRef.current();
   }
 
-  // 드래그 닫기
-  function handleTouchStart(e: React.TouchEvent) {
-    const el = sheetRef.current;
-    if (el && el.scrollTop > 0) return;
-    dragStartY.current = e.touches[0].clientY;
-    dragging.current = true;
-    dragCurrentY.current = 0;
-    if (el) el.style.transition = "none";
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (!dragging.current) return;
-    const diff = e.touches[0].clientY - dragStartY.current;
-    if (diff > 0) {
-      dragCurrentY.current = diff;
-      const el = sheetRef.current;
-      if (el) el.style.transform = `translateY(${diff}px)`;
-      e.preventDefault();
-    } else {
-      dragging.current = false;
-      const el = sheetRef.current;
-      if (el) {
-        el.style.transition = "transform 0.2s ease-out";
-        el.style.transform = "translateY(0)";
-      }
-    }
-  }
-
-  function handleTouchEnd() {
-    if (!dragging.current) return;
-    dragging.current = false;
-    const el = sheetRef.current;
-    if (el) el.style.transition = "transform 0.2s ease-out";
-    if (dragCurrentY.current > 100) {
-      if (el) el.style.transform = "translateY(100%)";
-      setTimeout(() => closeModal(), 200);
-    } else {
-      if (el) el.style.transform = "translateY(0)";
-    }
-  }
-
   async function addParticipant(member: Member) {
     try {
-      const participant: Participant = {
-        memberId: member.id,
-        status: "registered",
-        joinedAt: null,
-        leftAt: null,
-        gamesPlayed: 0,
-        lastGameEndedAt: null,
-      };
-      await participantRepository.add(scheduleId, participant);
+      await participantRepository.add(scheduleId, createParticipant(member.id));
       setAddedIds((prev) => new Set([...prev, member.id]));
       showToast(`${member.name}님을 추가했습니다.`, "success");
     } catch (error) {
@@ -135,110 +109,138 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
     }
   }
 
-  // 검색 필터링 (최근 가입순 정렬)
-  const filteredMembers = members
-    .filter((m) => {
-      if (searchQuery && !m.name.includes(searchQuery)) return false;
-      return true;
-    })
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  async function addAllParticipants(membersToAdd: Member[]) {
+    if (membersToAdd.length === 0 || addingAll) return;
+
+    try {
+      setAddingAll(true);
+      await participantRepository.addMany(
+        scheduleId,
+        membersToAdd.map((member) => createParticipant(member.id))
+      );
+      setAddedIds((prev) => new Set([...prev, ...membersToAdd.map((member) => member.id)]));
+      showToast(`${membersToAdd.length}명을 추가했습니다.`, "success");
+    } catch (error) {
+      console.error("참여자 일괄 추가 실패:", error);
+      showToast("일괄 추가에 실패했습니다.");
+    } finally {
+      setAddingAll(false);
+    }
+  }
+
+  const searchTerms = useMemo(() => resolveSearchTerms(searchQuery, members), [members, searchQuery]);
+  const hasSearchQuery = searchTerms.length > 0;
+
+  const filteredMembers = useMemo(() => {
+    return [...members]
+      .filter((member) => {
+        if (!hasSearchQuery) return true;
+        return searchTerms.some((term) => member.name.includes(term));
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }, [hasSearchQuery, members, searchTerms]);
+
+  const membersToAdd = filteredMembers.filter((member) => !addedIds.has(member.id));
+  const showAddAllButton = hasSearchQuery && filteredMembers.length >= 2 && membersToAdd.length >= 2;
 
   return (
-    <div
-      className="fixed inset-0 bg-black/50 flex items-end justify-center z-50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) closeModal();
-      }}
-    >
-      <div
-        ref={sheetRef}
-        className="bg-white rounded-t-2xl p-6 w-full max-w-3xl max-h-[85vh] overflow-y-auto"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        {/* 핸들 */}
-        <div className="w-9 h-1 bg-[var(--color-border)] rounded-full mx-auto mb-5" />
+    <div className="fixed inset-0 z-50 flex flex-col bg-white">
+      <header className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border)] px-4 py-3.5">
+        <button
+          type="button"
+          onClick={closeModal}
+          className="flex h-8 w-8 items-center justify-center text-xl text-[var(--color-text-muted)]"
+          aria-label="닫기"
+        >
+          ✕
+        </button>
+        <h2 className="text-lg font-bold">참여자 추가</h2>
+      </header>
 
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold">참여자 추가</h2>
-          <button
-            onClick={closeModal}
-            className="text-xl text-[var(--color-text-muted)] px-1"
-          >
-            ✕
-          </button>
-        </div>
-
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {/* 검색 */}
-        <input
-          type="text"
+        <textarea
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           placeholder="이름으로 검색"
-          className="w-full px-3.5 py-2.5 border border-[var(--color-border)] rounded-lg text-sm mb-4 focus:outline-none focus:border-[var(--color-primary)]"
+          rows={2}
+          className="mb-4 w-full resize-none rounded-lg border border-[var(--color-border)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none"
           autoFocus
         />
 
         {/* 모임원 목록 */}
         {filteredMembers.length > 0 ? (
-          <div className="bg-white rounded-xl border border-[var(--color-border)]">
-            {filteredMembers.map((member) => {
-              const levelInfo = scoreToLevelInfo(member.level);
-              const isMale = member.gender === "male";
-              const isAdded = addedIds.has(member.id);
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center px-3.5 py-3 border-b border-[#f4f7f9] last:border-b-0"
-                >
+          <>
+            <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
+              {filteredMembers.map((member) => {
+                const levelInfo = scoreToLevelInfo(member.level);
+                const isMale = member.gender === "male";
+                const isAdded = addedIds.has(member.id);
+                return (
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold mr-3 ${
-                      isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"
-                    }`}
+                    key={member.id}
+                    className="flex items-center border-b border-[#f4f7f9] px-3.5 py-3 last:border-b-0"
                   >
-                    {member.name.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold truncate">{member.name}</p>
-                    <p className="text-[11px] text-[var(--color-text-muted)]">
-                      {isMale ? "남" : "여"} · {levelInfo.display}
-                    </p>
-                  </div>
-                  {isAdded ? (
-                    <span className="px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                      추가됨
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => addParticipant(member)}
-                      className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-md text-[11px] font-semibold"
+                    <div
+                      className={`mr-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                        isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"
+                      }`}
                     >
-                      추가
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-[var(--color-text-muted)]">
-            <p className="text-sm">
-              {searchQuery ? "검색 결과가 없습니다" : "등록된 모임원이 없습니다"}
-            </p>
-            {searchQuery && (
+                      {member.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{member.name}</p>
+                      <p className="text-[11px] text-[var(--color-text-muted)]">
+                        {isMale ? "남" : "여"} · {levelInfo.display}
+                      </p>
+                    </div>
+                    {isAdded ? (
+                      <span className="px-3 py-1.5 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                        추가됨
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => addParticipant(member)}
+                        className="rounded-md bg-[var(--color-primary)] px-3 py-1.5 text-[11px] font-semibold text-white"
+                      >
+                        추가
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {showAddAllButton && (
               <button
+                type="button"
+                onClick={() => addAllParticipants(membersToAdd)}
+                disabled={addingAll}
+                className="mt-3 w-full rounded-xl bg-[var(--color-accent)] py-3.5 text-sm font-bold text-white shadow-sm active:bg-[var(--color-accent-dark)] disabled:cursor-not-allowed disabled:bg-gray-300"
+              >
+                {addingAll ? "추가중..." : `${membersToAdd.length}명 모두 추가하기`}
+              </button>
+            )}
+          </>
+        ) : (
+          <div className="py-8 text-center text-[var(--color-text-muted)]">
+            <p className="text-sm">
+              {hasSearchQuery ? "검색 결과가 없습니다" : "등록된 모임원이 없습니다"}
+            </p>
+            {hasSearchQuery && (
+              <button
+                type="button"
                 onClick={() => {
                   onAddMember(searchQuery);
                 }}
-                className="mt-3 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-semibold"
+                className="mt-3 rounded-lg bg-[var(--color-primary)] px-4 py-2 text-xs font-semibold text-white"
               >
                 모임원 추가
               </button>
             )}
           </div>
         )}
-
       </div>
     </div>
   );
