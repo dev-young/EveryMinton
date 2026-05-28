@@ -319,7 +319,6 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
           existingParticipants={participants}
           searchQuery={participantSearchQuery}
           suspendHistoryClose={showMemberAdd}
-          onClose={() => setShowAddParticipant(false)}
           onSaved={() => {
             setShowAddParticipant(false);
             loadData();
