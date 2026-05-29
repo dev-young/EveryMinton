@@ -232,40 +232,37 @@ export function CourtsTab({
             {...longPressHandlers}
           >
             {game ? (
-              <div className="flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="mb-2 flex items-center gap-2">
+              <div>
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="text-sm font-bold">코트 {index + 1}</span>
                     <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-accent)]">
                       진행중 : {game.startedAt && formatElapsed(game.startedAt)}
                     </span>
                   </div>
-                  <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
-                    <div className="grid min-w-0 grid-cols-2 gap-1">
-                      {game.team1.map((id) => (
-                        <PlayerChip key={id} member={getMember(id)} fill />
-                      ))}
-                    </div>
-                    <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
-                    <div className="grid min-w-0 grid-cols-2 gap-1">
-                      {game.team2.map((id) => (
-                        <PlayerChip key={id} member={getMember(id)} fill />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {!readOnly && (
-                  <div className="flex flex-col gap-1">
+                  {!readOnly && (
                     <button
                       onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => setEndingGameId(game.id)}
-                      className="rounded-md bg-[var(--color-danger)] px-2.5 py-1 text-[10px] font-semibold text-white"
+                      className="shrink-0 rounded-md bg-[var(--color-danger)] px-2.5 py-1 text-[10px] font-semibold text-white"
                     >
                       종료
                     </button>
+                  )}
+                </div>
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                  <div className="grid min-w-0 grid-cols-2 gap-1">
+                    {game.team1.map((id) => (
+                      <PlayerChip key={id} member={getMember(id)} fill />
+                    ))}
                   </div>
-                )}
+                  <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
+                  <div className="grid min-w-0 grid-cols-2 gap-1">
+                    {game.team2.map((id) => (
+                      <PlayerChip key={id} member={getMember(id)} fill />
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
               <div>
