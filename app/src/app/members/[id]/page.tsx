@@ -142,10 +142,10 @@ export default function MemberEditPage() {
         <button
           type="button"
           onClick={closeEditor}
-          className="flex h-8 w-8 items-center justify-center text-xl text-[var(--color-text-muted)]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center text-lg leading-none text-[var(--color-text-muted)]"
           aria-label="뒤로가기"
         >
-          ‹
+          ❮
         </button>
         <h1 className="min-w-0 flex-1 truncate text-lg font-bold">모임원 수정</h1>
         <button
