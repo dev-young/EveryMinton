@@ -38,11 +38,13 @@ function getSearchTerms(query: string): string[] {
     .filter(Boolean);
 }
 
+function resolveSearchTerm(term: string, members: Member[]): string {
+  const hasDirectMatch = members.some((member) => member.name.includes(term));
+  return term.length === 3 && !hasDirectMatch ? term.slice(-2) : term;
+}
+
 function resolveSearchTerms(query: string, members: Member[]): string[] {
-  return getSearchTerms(query).map((term) => {
-    const hasDirectMatch = members.some((member) => member.name.includes(term));
-    return term.length === 3 && !hasDirectMatch ? term.slice(-2) : term;
-  });
+  return getSearchTerms(query).map((term) => resolveSearchTerm(term, members));
 }
 
 export function AddParticipantModal({ scheduleId, members, existingParticipants, searchQuery, suspendHistoryClose = false, onSaved, onAddMember, onSearchQueryChange }: Props) {
@@ -128,8 +130,9 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
     }
   }
 
+  const rawSearchTerms = useMemo(() => getSearchTerms(searchQuery), [searchQuery]);
   const searchTerms = useMemo(() => resolveSearchTerms(searchQuery, members), [members, searchQuery]);
-  const hasSearchQuery = searchTerms.length > 0;
+  const hasSearchQuery = rawSearchTerms.length > 0;
 
   const filteredMembers = useMemo(() => {
     return [...members]
@@ -140,8 +143,21 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }, [hasSearchQuery, members, searchTerms]);
 
+  const missingSearchNames = useMemo(() => {
+    const seenNames = new Set<string>();
+
+    return rawSearchTerms.filter((term) => {
+      if (seenNames.has(term)) return false;
+      seenNames.add(term);
+
+      const resolvedTerm = resolveSearchTerm(term, members);
+      return !members.some((member) => member.name.includes(resolvedTerm));
+    });
+  }, [members, rawSearchTerms]);
+
   const membersToAdd = filteredMembers.filter((member) => !addedIds.has(member.id));
   const showAddAllButton = hasSearchQuery && filteredMembers.length >= 2 && membersToAdd.length >= 2;
+  const hasSearchResults = filteredMembers.length > 0 || missingSearchNames.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
@@ -169,7 +185,7 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
         />
 
         {/* 모임원 목록 */}
-        {filteredMembers.length > 0 ? (
+        {hasSearchResults ? (
           <>
             <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
               {filteredMembers.map((member) => {
@@ -210,6 +226,31 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
                   </div>
                 );
               })}
+              {missingSearchNames.map((name) => (
+                <div
+                  key={`missing-${name}`}
+                  className="flex items-center border-b border-[#f4f7f9] px-3.5 py-3 last:border-b-0"
+                >
+                  <div className="mr-3 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-[var(--color-text-muted)]">
+                    ?
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{name}</p>
+                    <p className="text-[11px] text-[var(--color-text-muted)]">
+                      존재하지 않은 모임원 입니다
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onAddMember(name);
+                    }}
+                    className="rounded-md bg-[var(--color-primary)] px-3 py-1.5 text-[11px] font-semibold text-white"
+                  >
+                    모임원 추가
+                  </button>
+                </div>
+              ))}
             </div>
 
             {showAddAllButton && (
