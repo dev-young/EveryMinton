@@ -26,6 +26,7 @@ export function ParticipantsTab({
 }: Props) {
   const { showToast } = useToast();
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
   const waiting = participants.filter((participant) => participant.status === "waiting");
   const playing = participants.filter((participant) => participant.status === "playing");
@@ -54,7 +55,22 @@ export function ParticipantsTab({
     setLeaveTarget(memberId);
   }
 
+  function handleCancel(memberId: string) {
+    setCancelTarget(memberId);
+  }
+
+  async function cancelParticipation(memberId: string) {
+    try {
+      await participantRepository.remove(scheduleId, memberId);
+      onRefresh?.();
+    } catch (error) {
+      console.error("참여 취소 실패:", error);
+      showToast("참여 취소에 실패했습니다.");
+    }
+  }
+
   const leaveTargetMember = leaveTarget ? getMember(leaveTarget) : undefined;
+  const cancelTargetMember = cancelTarget ? getMember(cancelTarget) : undefined;
 
   return (
     <div className="pb-20">
@@ -112,11 +128,18 @@ export function ParticipantsTab({
               member={getMember(participant.memberId)}
               actions={
                 readOnly ? null : (
-                  <StatusButton
-                    label="참여"
-                    color="accent"
-                    onClick={() => changeStatus(participant.memberId, "waiting")}
-                  />
+                  <div className="flex gap-1.5">
+                    <StatusButton
+                      label="취소"
+                      color="neutral"
+                      onClick={() => handleCancel(participant.memberId)}
+                    />
+                    <StatusButton
+                      label="참여"
+                      color="accent"
+                      onClick={() => changeStatus(participant.memberId, "waiting")}
+                    />
+                  </div>
                 )
               }
             />
@@ -156,6 +179,19 @@ export function ParticipantsTab({
           onConfirm={() => {
             changeStatus(leaveTarget, "left");
             setLeaveTarget(null);
+          }}
+        />
+      )}
+
+      {!readOnly && cancelTarget && (
+        <ConfirmDialog
+          title="참여 취소"
+          message={`${cancelTargetMember?.name ?? ""}님의 참여 예정을 취소하시겠습니까?`}
+          confirmLabel="취소"
+          onCancel={() => setCancelTarget(null)}
+          onConfirm={() => {
+            cancelParticipation(cancelTarget);
+            setCancelTarget(null);
           }}
         />
       )}
@@ -231,13 +267,14 @@ function StatusButton({
   onClick,
 }: {
   label: string;
-  color: "accent" | "danger";
+  color: "accent" | "danger" | "neutral";
   onClick: () => void;
 }) {
-  const colorClass =
-    color === "accent"
-      ? "bg-green-50 text-[var(--color-accent)]"
-      : "bg-red-50 text-[var(--color-danger)]";
+  const colorClass = {
+    accent: "bg-green-50 text-[var(--color-accent)]",
+    danger: "bg-red-50 text-[var(--color-danger)]",
+    neutral: "bg-gray-100 text-[var(--color-text-muted)]",
+  }[color];
 
   return (
     <button onClick={onClick} className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${colorClass}`}>
