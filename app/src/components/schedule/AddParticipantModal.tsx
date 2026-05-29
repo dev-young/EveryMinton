@@ -54,6 +54,7 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
   const onSavedRef = useRef(onSaved);
   const suspendHistoryCloseRef = useRef(suspendHistoryClose);
   const ignoreHistoryCloseUntilRef = useRef(0);
+  const searchInputRef = useRef<HTMLTextAreaElement>(null);
 
   const [addedIds, setAddedIds] = useState<Set<string>>(
     new Set(existingParticipants.filter((p) => p.status !== "left").map((p) => p.memberId))
@@ -67,6 +68,28 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
       ignoreHistoryCloseUntilRef.current = Date.now() + 800;
     }
   });
+
+  useEffect(() => {
+    const searchInput = searchInputRef.current;
+    if (!searchInput) return;
+
+    const styles = window.getComputedStyle(searchInput);
+    const lineHeight = parseFloat(styles.lineHeight) || 20;
+    const paddingTop = parseFloat(styles.paddingTop) || 0;
+    const paddingBottom = parseFloat(styles.paddingBottom) || 0;
+    const borderTop = parseFloat(styles.borderTopWidth) || 0;
+    const borderBottom = parseFloat(styles.borderBottomWidth) || 0;
+    const verticalSpace = paddingTop + paddingBottom + borderTop + borderBottom;
+    const singleLineHeight = Math.ceil(lineHeight + verticalSpace);
+    const maxHeight = Math.ceil(lineHeight * 2 + verticalSpace);
+
+    searchInput.style.height = `${singleLineHeight}px`;
+    const contentHeight = searchInput.scrollHeight + borderTop + borderBottom;
+    const nextHeight = Math.min(Math.max(contentHeight, singleLineHeight), maxHeight);
+
+    searchInput.style.height = `${nextHeight}px`;
+    searchInput.style.overflowY = contentHeight > maxHeight ? "auto" : "hidden";
+  }, [searchQuery]);
 
   const dismiss = useCallback(() => {
     if (closedRef.current) return;
@@ -176,11 +199,12 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
       <div className="flex-1 overflow-y-auto px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {/* 검색 */}
         <textarea
+          ref={searchInputRef}
           value={searchQuery}
           onChange={(e) => onSearchQueryChange(e.target.value)}
           placeholder="이름으로 검색"
-          rows={2}
-          className="mb-4 w-full resize-none rounded-lg border border-[var(--color-border)] px-3.5 py-2.5 text-sm focus:border-[var(--color-primary)] focus:outline-none"
+          rows={1}
+          className="mb-4 w-full resize-none rounded-lg border border-[var(--color-border)] px-3.5 py-3 text-sm leading-5 focus:border-[var(--color-primary)] focus:outline-none"
           autoFocus
         />
 
