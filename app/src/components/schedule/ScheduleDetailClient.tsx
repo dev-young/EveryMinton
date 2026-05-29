@@ -107,7 +107,10 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("courts");
+  const [activeTab, setActiveTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "courts";
+    return new URLSearchParams(window.location.search).get("tab") === "participants" ? "participants" : "courts";
+  });
   const [showAddParticipant, setShowAddParticipant] = useState(false);
   const [showManualMatch, setShowManualMatch] = useState(false);
   const [manualMatchInitialIds, setManualMatchInitialIds] = useState<string[]>([]);
@@ -292,6 +295,10 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
             onAddClick={() => {
               setParticipantSearchQuery("");
               setShowAddParticipant(true);
+            }}
+            onMemberClick={(memberId) => {
+              const returnTo = encodeURIComponent(`/schedule/${scheduleId}?tab=participants`);
+              router.push(`/members/${memberId}?returnTo=${returnTo}`);
             }}
             onRefresh={loadData}
           />

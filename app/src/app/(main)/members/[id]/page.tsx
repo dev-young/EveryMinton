@@ -13,6 +13,11 @@ export default function MemberEditPage() {
   const params = useParams<{ id: string }>();
   const { showToast } = useToast();
   const memberId = params.id;
+  const [returnPath] = useState(() => {
+    if (typeof window === "undefined") return "/members";
+    const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+    return returnTo?.startsWith("/") ? returnTo : "/members";
+  });
 
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,6 +58,11 @@ export default function MemberEditPage() {
     loadMember();
   }, [memberId, router, showToast]);
 
+  function navigateToReturnPath() {
+    const separator = returnPath.includes("?") ? "&" : "?";
+    router.push(`${returnPath}${separator}memberUpdated=${Date.now()}`);
+  }
+
   async function handleSave() {
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -68,7 +78,7 @@ export default function MemberEditPage() {
         level: calculateScore(grade, subGrade),
       });
       showToast("모임원 정보가 수정되었습니다.", "success");
-      router.push("/members");
+      navigateToReturnPath();
     } catch (error) {
       console.error("모임원 수정 실패:", error);
       showToast("수정에 실패했습니다.");
@@ -82,7 +92,7 @@ export default function MemberEditPage() {
       setDeleting(true);
       await memberRepository.delete(memberId);
       showToast("모임원이 삭제되었습니다.", "success");
-      router.push("/members");
+      navigateToReturnPath();
     } catch (error) {
       console.error("모임원 삭제 실패:", error);
       showToast("삭제에 실패했습니다.");

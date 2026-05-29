@@ -13,6 +13,7 @@ interface Props {
   getMember: (id: string) => Member | undefined;
   readOnly?: boolean;
   onAddClick?: () => void;
+  onMemberClick?: (memberId: string) => void;
   onRefresh?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function ParticipantsTab({
   getMember,
   readOnly = false,
   onAddClick,
+  onMemberClick,
   onRefresh,
 }: Props) {
   const { showToast } = useToast();
@@ -86,6 +88,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
                 readOnly ? null : (
                   <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(participant.memberId)} />
@@ -103,6 +106,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
                 readOnly ? null : (
                   <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(participant.memberId)} />
@@ -120,6 +124,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
                 readOnly ? null : (
                   <div className="flex gap-1.5">
@@ -148,6 +153,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               dimmed
               actions={null}
             />
@@ -208,11 +214,13 @@ function ParticipantItem({
   participant,
   member,
   dimmed,
+  onClick,
   actions,
 }: {
   participant: Participant;
   member: Member | undefined;
   dimmed?: boolean;
+  onClick?: () => void;
   actions: React.ReactNode;
 }) {
   if (!member) return null;
@@ -222,7 +230,19 @@ function ParticipantItem({
 
   return (
     <div
-      className={`flex items-center border-b border-[#f4f7f9] px-3.5 py-3 last:border-b-0 ${dimmed ? "opacity-50" : ""}`}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      className={`flex items-center border-b border-[#f4f7f9] px-3.5 py-3 last:border-b-0 ${
+        onClick ? "cursor-pointer active:bg-gray-50" : ""
+      } ${dimmed ? "opacity-50" : ""}`}
     >
       <div
         className={`mr-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
@@ -238,7 +258,7 @@ function ParticipantItem({
           {participant.gamesPlayed > 0 && ` · 게임 ${participant.gamesPlayed}회`}
         </p>
       </div>
-      {actions}
+      {actions && <div onClick={(event) => event.stopPropagation()}>{actions}</div>}
     </div>
   );
 }
@@ -259,7 +279,13 @@ function StatusButton({
   }[color];
 
   return (
-    <button onClick={onClick} className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${colorClass}`}>
+    <button
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick();
+      }}
+      className={`rounded-md px-3 py-1.5 text-[11px] font-semibold ${colorClass}`}
+    >
       {label}
     </button>
   );
