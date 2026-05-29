@@ -198,62 +198,89 @@ export function CourtsTab({
         </p>
       </div>
 
-      {courts.map((game, index) => (
-        <div key={index} className="mb-3 rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
-          {game ? (
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
+      {courts.map((game, index) => {
+        let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+
+        function clearLongPress() {
+          if (longPressTimer) {
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        }
+
+        const longPressHandlers =
+          game && !readOnly
+            ? {
+                onPointerDown: () => {
+                  longPressTimer = setTimeout(() => {
+                    setCancellingGameId(game.id);
+                  }, 600);
+                },
+                onPointerUp: clearLongPress,
+                onPointerLeave: clearLongPress,
+                onPointerCancel: clearLongPress,
+                onPointerMove: clearLongPress,
+              }
+            : {};
+
+        return (
+          <div
+            key={index}
+            className={`mb-3 rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm ${
+              game && !readOnly ? "select-none" : ""
+            }`}
+            {...longPressHandlers}
+          >
+            {game ? (
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-sm font-bold">코트 {index + 1}</span>
+                    <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-accent)]">
+                      진행중 : {game.startedAt && formatElapsed(game.startedAt)}
+                    </span>
+                  </div>
+                  <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                    <div className="grid min-w-0 grid-cols-2 gap-1">
+                      {game.team1.map((id) => (
+                        <PlayerChip key={id} member={getMember(id)} fill />
+                      ))}
+                    </div>
+                    <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
+                    <div className="grid min-w-0 grid-cols-2 gap-1">
+                      {game.team2.map((id) => (
+                        <PlayerChip key={id} member={getMember(id)} fill />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {!readOnly && (
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => setEndingGameId(game.id)}
+                      className="rounded-md bg-[var(--color-danger)] px-2.5 py-1 text-[10px] font-semibold text-white"
+                    >
+                      종료
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-sm font-bold">코트 {index + 1}</span>
-                  <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-accent)]">
-                    진행중 : {game.startedAt && formatElapsed(game.startedAt)}
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-muted)]">
+                    비어있음
                   </span>
                 </div>
-                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
-                  <div className="grid min-w-0 grid-cols-2 gap-1">
-                    {game.team1.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} fill />
-                    ))}
-                  </div>
-                  <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
-                  <div className="grid min-w-0 grid-cols-2 gap-1">
-                    {game.team2.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} fill />
-                    ))}
-                  </div>
-                </div>
+                <div className="py-2 text-center text-xs text-[var(--color-text-muted)]">배정된 게임 없음</div>
               </div>
-
-              {!readOnly && (
-                <div className="flex flex-col gap-1">
-                  <button
-                    onClick={() => setEndingGameId(game.id)}
-                    className="rounded-md bg-[var(--color-danger)] px-2.5 py-1 text-[10px] font-semibold text-white"
-                  >
-                    종료
-                  </button>
-                  <button
-                    onClick={() => setCancellingGameId(game.id)}
-                    className="rounded-md bg-[#f1f5f8] px-2.5 py-1 text-[10px] font-semibold text-[var(--color-text-secondary)]"
-                  >
-                    취소
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div>
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-sm font-bold">코트 {index + 1}</span>
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-muted)]">
-                  비어있음
-                </span>
-              </div>
-              <div className="py-2 text-center text-xs text-[var(--color-text-muted)]">배정된 게임 없음</div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        );
+      })}
 
       {waitingGames.length > 0 && (
         <div className="mt-5">
