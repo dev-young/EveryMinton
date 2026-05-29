@@ -375,9 +375,6 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
           defaultName={memberAddName}
           manageHistory={false}
           onClose={() => setShowMemberAdd(false)}
-          onSavedName={(savedName) => {
-            setParticipantSearchQuery(savedName);
-          }}
           onSaved={() => {
             setShowMemberAdd(false);
             loadData();
