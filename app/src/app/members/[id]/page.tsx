@@ -24,11 +24,30 @@ export default function MemberEditPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   const [name, setName] = useState("");
   const [gender, setGender] = useState<Gender>("male");
   const [grade, setGrade] = useState<LevelGrade>("D");
   const [subGrade, setSubGrade] = useState<LevelSubGrade>("중");
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+
+    function updateKeyboardOffset() {
+      const offset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      setKeyboardOffset(offset);
+    }
+
+    updateKeyboardOffset();
+    viewport.addEventListener("resize", updateKeyboardOffset);
+    viewport.addEventListener("scroll", updateKeyboardOffset);
+    return () => {
+      viewport.removeEventListener("resize", updateKeyboardOffset);
+      viewport.removeEventListener("scroll", updateKeyboardOffset);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadMember() {
@@ -211,7 +230,10 @@ export default function MemberEditPage() {
         </div>
       </main>
 
-      <div className="shrink-0 border-t border-[var(--color-border)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <div
+        className="shrink-0 border-t border-[var(--color-border)] bg-white px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        style={{ marginBottom: keyboardOffset }}
+      >
         <button
           type="button"
           onClick={handleSave}
