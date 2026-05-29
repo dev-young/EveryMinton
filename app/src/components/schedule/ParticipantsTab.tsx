@@ -26,7 +26,6 @@ export function ParticipantsTab({
 }: Props) {
   const { showToast } = useToast();
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
-  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
 
   const waiting = participants.filter((participant) => participant.status === "waiting");
   const playing = participants.filter((participant) => participant.status === "playing");
@@ -55,10 +54,6 @@ export function ParticipantsTab({
     setLeaveTarget(memberId);
   }
 
-  function handleCancel(memberId: string) {
-    setCancelTarget(memberId);
-  }
-
   async function cancelParticipation(memberId: string) {
     try {
       await participantRepository.remove(scheduleId, memberId);
@@ -70,7 +65,6 @@ export function ParticipantsTab({
   }
 
   const leaveTargetMember = leaveTarget ? getMember(leaveTarget) : undefined;
-  const cancelTargetMember = cancelTarget ? getMember(cancelTarget) : undefined;
 
   return (
     <div className="pb-20">
@@ -132,7 +126,7 @@ export function ParticipantsTab({
                     <StatusButton
                       label="취소"
                       color="neutral"
-                      onClick={() => handleCancel(participant.memberId)}
+                      onClick={() => cancelParticipation(participant.memberId)}
                     />
                     <StatusButton
                       label="참여"
@@ -183,18 +177,6 @@ export function ParticipantsTab({
         />
       )}
 
-      {!readOnly && cancelTarget && (
-        <ConfirmDialog
-          title="참여 취소"
-          message={`${cancelTargetMember?.name ?? ""}님의 참여 예정을 취소하시겠습니까?`}
-          confirmLabel="취소"
-          onCancel={() => setCancelTarget(null)}
-          onConfirm={() => {
-            cancelParticipation(cancelTarget);
-            setCancelTarget(null);
-          }}
-        />
-      )}
     </div>
   );
 }
