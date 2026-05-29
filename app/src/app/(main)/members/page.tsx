@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Member, Gender, LevelGrade, LevelSubGrade } from "@/types";
 import { memberRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
@@ -8,13 +9,13 @@ import { MemberAddModal } from "@/components/MemberAddModal";
 import { MemberListItem } from "@/components/MemberListItem";
 
 export default function MembersPage() {
+  const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterGender, setFilterGender] = useState<Gender | "all">("all");
   const [filterLevel, setFilterLevel] = useState<LevelGrade | "all">("all");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [prefillName, setPrefillName] = useState("");
   const [lastGender, setLastGender] = useState<Gender>("male");
   const [lastGrade, setLastGrade] = useState<LevelGrade>("D");
@@ -36,24 +37,8 @@ export default function MembersPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("정말 삭제하시겠습니까?")) return;
-    try {
-      await memberRepository.delete(id);
-      setMembers((prev) => prev.filter((m) => m.id !== id));
-    } catch (error) {
-      console.error("삭제 실패:", error);
-    }
-  }
-
-  function handleEdit(member: Member) {
-    setEditingMember(member);
-    setShowAddModal(true);
-  }
-
   function handleModalClose() {
     setShowAddModal(false);
-    setEditingMember(null);
     setPrefillName("");
   }
 
@@ -163,8 +148,7 @@ export default function MembersPage() {
             <MemberListItem
               key={member.id}
               member={member}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
+              onClick={(selectedMember) => router.push(`/members/${selectedMember.id}`)}
             />
           ))}
         </div>
@@ -173,11 +157,11 @@ export default function MembersPage() {
       {/* 등록/수정 모달 */}
       {showAddModal && (
         <MemberAddModal
-          member={editingMember}
+          member={null}
           defaultName={prefillName}
-          defaultGender={editingMember ? undefined : lastGender}
-          defaultGrade={editingMember ? undefined : lastGrade}
-          defaultSubGrade={editingMember ? undefined : lastSubGrade}
+          defaultGender={lastGender}
+          defaultGrade={lastGrade}
+          defaultSubGrade={lastSubGrade}
           onClose={handleModalClose}
           onSaved={handleMemberSaved}
           onSavedContinue={loadMembers}

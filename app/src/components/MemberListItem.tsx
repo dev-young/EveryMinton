@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
 import { Member } from "@/types";
 import { scoreToLevelInfo } from "@/lib/level";
 
 interface Props {
   member: Member;
-  onEdit: (member: Member) => void;
-  onDelete: (id: string) => void;
+  onClick: (member: Member) => void;
 }
 
 const LEVEL_COLORS: Record<string, string> = {
@@ -18,23 +16,16 @@ const LEVEL_COLORS: Record<string, string> = {
   E: "bg-gray-100 text-gray-500",
 };
 
-export function MemberListItem({ member, onEdit, onDelete }: Props) {
-  const [showMenu, setShowMenu] = useState(false);
-  const [openAbove, setOpenAbove] = useState(false);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+export function MemberListItem({ member, onClick }: Props) {
   const levelInfo = scoreToLevelInfo(member.level);
   const isMale = member.gender === "male";
 
-  useEffect(() => {
-    if (showMenu && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - rect.bottom;
-      setOpenAbove(spaceBelow < 120);
-    }
-  }, [showMenu]);
-
   return (
-    <div className="flex items-center px-4 py-3.5 border-b border-[#f4f7f9] last:border-b-0 relative">
+    <button
+      type="button"
+      onClick={() => onClick(member)}
+      className="relative flex w-full items-center border-b border-[#f4f7f9] px-4 py-3.5 text-left last:border-b-0 active:bg-gray-50"
+    >
       {/* 아바타 */}
       <div
         className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold mr-3 ${
@@ -62,49 +53,6 @@ export function MemberListItem({ member, onEdit, onDelete }: Props) {
       >
         {levelInfo.display}
       </span>
-
-      {/* 더보기 */}
-      <button
-        ref={buttonRef}
-        onClick={() => setShowMenu(!showMenu)}
-        className="ml-2 text-xl text-[var(--color-text-muted)] px-1"
-      >
-        ⋮
-      </button>
-
-      {/* 드롭다운 메뉴 */}
-      {showMenu && (
-        <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setShowMenu(false)}
-          />
-          <div
-            className={`absolute right-4 bg-white rounded-lg shadow-lg border border-[var(--color-border)] z-20 overflow-hidden ${
-              openAbove ? "bottom-12" : "top-12"
-            }`}
-          >
-            <button
-              onClick={() => {
-                setShowMenu(false);
-                onEdit(member);
-              }}
-              className="block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50"
-            >
-              수정
-            </button>
-            <button
-              onClick={() => {
-                setShowMenu(false);
-                onDelete(member.id);
-              }}
-              className="block w-full text-left px-4 py-2.5 text-sm text-[var(--color-danger)] hover:bg-red-50"
-            >
-              삭제
-            </button>
-          </div>
-        </>
-      )}
-    </div>
+    </button>
   );
 }
