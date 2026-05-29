@@ -79,7 +79,7 @@ export default function MemberEditPage() {
 
   function navigateToReturnPath() {
     const separator = returnPath.includes("?") ? "&" : "?";
-    router.push(`${returnPath}${separator}memberUpdated=${Date.now()}`);
+    router.replace(`${returnPath}${separator}memberUpdated=${Date.now()}`);
   }
 
   async function handleSave() {
