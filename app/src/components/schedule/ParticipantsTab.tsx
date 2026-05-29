@@ -113,7 +113,7 @@ export function ParticipantsTab({
               actions={
                 readOnly ? null : (
                   <StatusButton
-                    label="대기중으로"
+                    label="참여"
                     color="accent"
                     onClick={() => changeStatus(participant.memberId, "waiting")}
                   />
