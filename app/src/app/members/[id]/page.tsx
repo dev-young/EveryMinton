@@ -104,7 +104,7 @@ export default function MemberEditPage() {
 
   if (loading) {
     return (
-      <div className="p-4">
+      <div className="fixed inset-0 z-[80] bg-white p-4">
         <div className="py-10 text-center text-sm text-[var(--color-text-muted)]">로딩중...</div>
       </div>
     );
@@ -113,7 +113,7 @@ export default function MemberEditPage() {
   if (!member) return null;
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] flex-col bg-white">
+    <div className="fixed inset-0 z-[80] flex flex-col bg-white">
       <header className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border)] px-4 py-3.5">
         <button
           type="button"
