@@ -297,8 +297,9 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
               setShowAddParticipant(true);
             }}
             onMemberClick={(memberId) => {
-              const returnTo = encodeURIComponent(`/schedule/${scheduleId}?tab=participants`);
-              router.push(`/members/${memberId}?returnTo=${returnTo}`);
+              const returnTo = `/schedule/${scheduleId}?tab=participants`;
+              window.history.replaceState(window.history.state, "", returnTo);
+              router.push(`/members/${memberId}?${new URLSearchParams({ returnTo }).toString()}`);
             }}
             onRefresh={loadData}
           />

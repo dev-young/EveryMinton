@@ -83,6 +83,10 @@ export default function MemberEditPage() {
     router.replace(`${returnPath}${separator}memberUpdated=${Date.now()}`);
   }
 
+  function closeEditor() {
+    router.replace(returnPath);
+  }
+
   async function handleSave() {
     const trimmedName = name.trim();
     if (!trimmedName) {
@@ -137,7 +141,7 @@ export default function MemberEditPage() {
       <header className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border)] px-4 py-3.5">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={closeEditor}
           className="flex h-8 w-8 items-center justify-center text-xl text-[var(--color-text-muted)]"
           aria-label="뒤로가기"
         >
