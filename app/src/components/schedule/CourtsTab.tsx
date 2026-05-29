@@ -209,22 +209,16 @@ export function CourtsTab({
                     진행중 : {game.startedAt && formatElapsed(game.startedAt)}
                   </span>
                 </div>
-                <div
-                  className={
-                    readOnly
-                      ? "grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2"
-                      : "flex flex-wrap items-center gap-2"
-                  }
-                >
-                  <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
+                <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                  <div className="grid min-w-0 grid-cols-2 gap-1">
                     {game.team1.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} fill={readOnly} />
+                      <PlayerChip key={id} member={getMember(id)} fill />
                     ))}
                   </div>
                   <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
-                  <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
+                  <div className="grid min-w-0 grid-cols-2 gap-1">
                     {game.team2.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} fill={readOnly} />
+                      <PlayerChip key={id} member={getMember(id)} fill />
                     ))}
                   </div>
                 </div>
