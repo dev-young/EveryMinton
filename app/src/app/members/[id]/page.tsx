@@ -34,18 +34,19 @@ export default function MemberEditPage() {
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
+    const visualViewport = viewport;
 
     function updateKeyboardOffset() {
-      const offset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      const offset = Math.max(0, window.innerHeight - visualViewport.height - visualViewport.offsetTop);
       setKeyboardOffset(offset);
     }
 
     updateKeyboardOffset();
-    viewport.addEventListener("resize", updateKeyboardOffset);
-    viewport.addEventListener("scroll", updateKeyboardOffset);
+    visualViewport.addEventListener("resize", updateKeyboardOffset);
+    visualViewport.addEventListener("scroll", updateKeyboardOffset);
     return () => {
-      viewport.removeEventListener("resize", updateKeyboardOffset);
-      viewport.removeEventListener("scroll", updateKeyboardOffset);
+      visualViewport.removeEventListener("resize", updateKeyboardOffset);
+      visualViewport.removeEventListener("scroll", updateKeyboardOffset);
     };
   }, []);
 
