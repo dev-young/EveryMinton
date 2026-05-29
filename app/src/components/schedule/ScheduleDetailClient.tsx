@@ -20,6 +20,7 @@ type Mode = "admin" | "view";
 interface Props {
   scheduleId: string;
   mode: Mode;
+  initialTab?: Tab;
 }
 
 type Tab = "courts" | "waiting" | "participants" | "settings" | "info";
@@ -96,7 +97,7 @@ async function copyText(text: string) {
   document.body.removeChild(textarea);
 }
 
-export function ScheduleDetailClient({ scheduleId, mode }: Props) {
+export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }: Props) {
   const router = useRouter();
   const { showToast } = useToast();
   const isReadOnly = mode === "view";
@@ -107,10 +108,7 @@ export function ScheduleDetailClient({ scheduleId, mode }: Props) {
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>(() => {
-    if (typeof window === "undefined") return "courts";
-    return new URLSearchParams(window.location.search).get("tab") === "participants" ? "participants" : "courts";
-  });
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [showAddParticipant, setShowAddParticipant] = useState(false);
   const [showManualMatch, setShowManualMatch] = useState(false);
   const [manualMatchInitialIds, setManualMatchInitialIds] = useState<string[]>([]);
