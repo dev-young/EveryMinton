@@ -12,6 +12,8 @@ interface MatchResult {
   team2: [string, string];
 }
 
+const MALE_LEVEL_ADJUSTMENT = 20;
+
 /**
  * 자동 매칭 알고리즘
  * 우선순위에 따라 최적의 4명 조합을 선택하고 팀을 구성
@@ -19,7 +21,7 @@ interface MatchResult {
 export function generateMatches(
   participants: Participant[],
   members: Member[],
-  games: Game[],
+  _games: Game[],
   priorities: MatchingPriority[],
   options: {
     includePlayingMembers: boolean;
@@ -38,10 +40,10 @@ export function generateMatches(
     const available = candidates.filter((c) => !usedIds.has(c.memberId));
     if (available.length < 4) break;
 
-    const selected = selectBestFour(available, priorities, games);
+    const selected = selectBestFour(available, priorities);
     if (!selected) break;
 
-    const teamResult = assignTeams(selected, priorities, games);
+    const teamResult = assignTeams(selected, priorities);
     results.push(teamResult);
 
     selected.forEach((c) => usedIds.add(c.memberId));
@@ -82,8 +84,7 @@ function getCandidates(
  */
 function selectBestFour(
   candidates: MatchCandidate[],
-  priorities: MatchingPriority[],
-  games: Game[]
+  priorities: MatchingPriority[]
 ): MatchCandidate[] | null {
   if (candidates.length < 4) return null;
 
@@ -139,8 +140,7 @@ function selectWithGenderBalance(
  */
 function assignTeams(
   selected: MatchCandidate[],
-  priorities: MatchingPriority[],
-  games: Game[]
+  priorities: MatchingPriority[]
 ): MatchResult {
   const levelPriorityIndex = priorities.indexOf("level_balance");
 
@@ -148,7 +148,7 @@ function assignTeams(
   if (levelPriorityIndex !== -1) {
     // 실력순 정렬 후 1,4번 vs 2,3번 (지그재그 배정)
     const bySLevel = [...selected].sort(
-      (a, b) => b.member.level - a.member.level
+      (a, b) => getEffectiveLevel(b.member) - getEffectiveLevel(a.member)
     );
     return {
       team1: [bySLevel[0].memberId, bySLevel[3].memberId],
@@ -173,4 +173,12 @@ function calculateGPH(participant: Participant): number {
     (now.getTime() - participant.joinedAt.getTime()) / 60000;
   if (minutesElapsed <= 0) return 0;
   return (participant.gamesPlayed / minutesElapsed) * 60;
+}
+
+/**
+ * 매칭용 실력 점수.
+ * 표시/저장 급수는 유지하고, 실제 경기 밸런스 계산에만 성별 보정을 적용한다.
+ */
+function getEffectiveLevel(member: Member): number {
+  return member.level + (member.gender === "male" ? MALE_LEVEL_ADJUSTMENT : 0);
 }
