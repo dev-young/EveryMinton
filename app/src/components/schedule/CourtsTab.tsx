@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Schedule, Game, Participant, Member } from "@/types";
 import { gameRepository, participantRepository } from "@/repositories";
-import { scoreToLevelInfo } from "@/lib/level";
+import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -253,13 +253,13 @@ export function CourtsTab({
                 <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
                   <div className="grid min-w-0 grid-cols-2 gap-1">
                     {game.team1.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} fill />
+                      <PlayerChip key={id} member={getMember(id)} fill readOnly={readOnly} />
                     ))}
                   </div>
                   <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
                   <div className="grid min-w-0 grid-cols-2 gap-1">
                     {game.team2.map((id) => (
-                      <PlayerChip key={id} member={getMember(id)} fill />
+                      <PlayerChip key={id} member={getMember(id)} fill readOnly={readOnly} />
                     ))}
                   </div>
                 </div>
@@ -341,6 +341,7 @@ export function CourtsTab({
                             member={getMember(id)}
                             participant={participantMap.get(id)}
                             fill={readOnly}
+                            readOnly={readOnly}
                           />
                         ))}
                       </div>
@@ -352,6 +353,7 @@ export function CourtsTab({
                             member={getMember(id)}
                             participant={participantMap.get(id)}
                             fill={readOnly}
+                            readOnly={readOnly}
                           />
                         ))}
                       </div>
@@ -426,11 +428,20 @@ export function CourtsTab({
   );
 }
 
-function PlayerChip({ member, fill = false }: { member: Member | undefined; fill?: boolean }) {
+function PlayerChip({
+  member,
+  fill = false,
+  readOnly = false,
+}: {
+  member: Member | undefined;
+  fill?: boolean;
+  readOnly?: boolean;
+}) {
   if (!member) return null;
 
   const isMale = member.gender === "male";
   const levelInfo = scoreToLevelInfo(member.level);
+  const levelDisplay = readOnly ? scoreToViewLevelDisplay(member.level) : `${levelInfo.grade}조`;
 
   return (
     <span
@@ -439,7 +450,7 @@ function PlayerChip({ member, fill = false }: { member: Member | undefined; fill
       }`}
     >
       <span className="max-w-full truncate text-sm font-bold">{member.name}</span>
-      <span className="text-[9.5px] opacity-60">{levelInfo.grade}조</span>
+      <span className="text-[9.5px] opacity-60">{levelDisplay}</span>
     </span>
   );
 }
@@ -448,15 +459,18 @@ function PlayerChipDetail({
   member,
   participant,
   fill = false,
+  readOnly = false,
 }: {
   member: Member | undefined;
   participant: Participant | undefined;
   fill?: boolean;
+  readOnly?: boolean;
 }) {
   if (!member) return null;
 
   const isMale = member.gender === "male";
   const levelInfo = scoreToLevelInfo(member.level);
+  const levelDisplay = readOnly ? scoreToViewLevelDisplay(member.level) : levelInfo.display;
   const gph = participant ? calculateGPH(participant) : 0;
   const isPlaying = participant?.status === "playing";
   const bgColor = isPlaying
@@ -469,7 +483,7 @@ function PlayerChipDetail({
     <span className={`flex min-w-0 flex-col items-center rounded-md px-1.5 py-1 ${fill ? "w-full" : ""} ${bgColor}`}>
       <span className="max-w-full truncate text-sm font-bold">{member.name}</span>
       <span className="max-w-full truncate text-[9.5px] opacity-60">
-        {levelInfo.display} · {gph.toFixed(1)}/h
+        {levelDisplay} · {gph.toFixed(1)}/h
       </span>
     </span>
   );

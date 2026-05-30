@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Participant, Member, ParticipantStatus } from "@/types";
 import { participantRepository } from "@/repositories";
-import { scoreToLevelInfo } from "@/lib/level";
+import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -88,6 +88,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
                 readOnly ? null : (
@@ -106,6 +107,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
                 readOnly ? null : (
@@ -124,6 +126,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
                 readOnly ? null : (
@@ -153,6 +156,7 @@ export function ParticipantsTab({
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
+              readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               dimmed
               actions={null}
@@ -213,12 +217,14 @@ function ParticipantGroup({
 function ParticipantItem({
   participant,
   member,
+  readOnly = false,
   dimmed,
   onClick,
   actions,
 }: {
   participant: Participant;
   member: Member | undefined;
+  readOnly?: boolean;
   dimmed?: boolean;
   onClick?: () => void;
   actions: React.ReactNode;
@@ -226,6 +232,7 @@ function ParticipantItem({
   if (!member) return null;
 
   const levelInfo = scoreToLevelInfo(member.level);
+  const levelDisplay = readOnly ? scoreToViewLevelDisplay(member.level) : levelInfo.display;
   const isMale = member.gender === "male";
 
   return (
@@ -254,7 +261,7 @@ function ParticipantItem({
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{member.name}</p>
         <p className="text-[11px] text-[var(--color-text-muted)]">
-          {isMale ? "남" : "여"} · {levelInfo.display}
+          {isMale ? "남" : "여"} · {levelDisplay}
           {participant.gamesPlayed > 0 && ` · 게임 ${participant.gamesPlayed}회`}
         </p>
       </div>

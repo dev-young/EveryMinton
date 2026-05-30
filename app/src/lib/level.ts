@@ -66,6 +66,19 @@ export function scoreToLevelInfo(score: number): LevelInfo {
 }
 
 /**
+ * 보기 전용 일정에서 사용하는 대외 노출용 급수 표시
+ */
+export function scoreToViewLevelDisplay(score: number): string {
+  const levelInfo = scoreToLevelInfo(score);
+
+  if (levelInfo.grade === "E") {
+    return "초심";
+  }
+
+  return `${levelInfo.grade}조`;
+}
+
+/**
  * 모든 가능한 등급 조합과 점수 목록
  */
 export function getAllLevelOptions(): LevelInfo[] {
