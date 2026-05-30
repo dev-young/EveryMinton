@@ -13,6 +13,7 @@ interface Props {
   participantCount: number;
   gameCount: number;
   readOnly?: boolean;
+  onFeedbackClick?: () => void;
   onRefresh?: () => void;
 }
 
@@ -28,7 +29,14 @@ const STATUS_LABEL: Record<Schedule["status"], string> = {
   completed: "완료",
 };
 
-export function ScheduleInfoTab({ schedule, participantCount, gameCount, readOnly = false, onRefresh }: Props) {
+export function ScheduleInfoTab({
+  schedule,
+  participantCount,
+  gameCount,
+  readOnly = false,
+  onFeedbackClick,
+  onRefresh,
+}: Props) {
   const { showToast } = useToast();
   const router = useRouter();
   const [showEditModal, setShowEditModal] = useState(false);
@@ -73,6 +81,19 @@ export function ScheduleInfoTab({ schedule, participantCount, gameCount, readOnl
         <InfoRow label="참여 인원" value={`${participantCount}명`} />
         <InfoRow label="총 진행 게임" value={`${gameCount}회`} />
       </div>
+
+      {onFeedbackClick && (
+        <div className="mb-4 rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm">
+          <p className="mb-3 text-sm font-bold">피드백</p>
+          <button
+            type="button"
+            onClick={onFeedbackClick}
+            className="w-full rounded-xl border border-[var(--color-border)] bg-[#f8fafb] py-3.5 text-sm font-bold text-[var(--color-primary)] active:bg-gray-100"
+          >
+            피드백 남기기
+          </button>
+        </div>
+      )}
 
       {!readOnly && (
         <div className="space-y-2">

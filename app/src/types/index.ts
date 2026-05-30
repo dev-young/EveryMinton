@@ -64,6 +64,20 @@ export type MatchingPriority =
   | "gender_balance"
   | "level_balance";
 
+// 피드백
+export type FeedbackMode = "admin" | "view";
+export type FeedbackStatus = "new" | "reviewing" | "done";
+
+export interface Feedback {
+  id: string;
+  scheduleId: string;
+  message: string;
+  mode: FeedbackMode;
+  pageUrl: string;
+  status: FeedbackStatus;
+  createdAt: Date;
+}
+
 // 급수 점수 계산용
 export interface LevelInfo {
   grade: LevelGrade;

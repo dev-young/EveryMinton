@@ -1,4 +1,4 @@
-import { Member, Schedule, Participant, Game } from "@/types";
+import { Member, Schedule, Participant, Game, Feedback } from "@/types";
 
 /**
  * 모임원 Repository 인터페이스
@@ -60,4 +60,11 @@ export interface GameRepository {
   ): Promise<void>;
   delete(scheduleId: string, gameId: string): Promise<void>;
   getActiveGames(scheduleId: string): Promise<Game[]>;
+}
+
+/**
+ * 피드백 Repository 인터페이스
+ */
+export interface FeedbackRepository {
+  create(feedback: Omit<Feedback, "id" | "createdAt" | "status">): Promise<Feedback>;
 }

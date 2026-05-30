@@ -13,6 +13,7 @@ import { AddParticipantModal } from "@/components/schedule/AddParticipantModal";
 import { ManualMatchModal } from "@/components/schedule/ManualMatchModal";
 import { AutoMatchModal } from "@/components/schedule/AutoMatchModal";
 import { MemberAddModal } from "@/components/MemberAddModal";
+import { FeedbackModal } from "@/components/FeedbackModal";
 import { useToast } from "@/components/Toast";
 
 type Mode = "admin" | "view";
@@ -115,6 +116,7 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
   const [editingGameId, setEditingGameId] = useState<string | undefined>(undefined);
   const [showAutoMatch, setShowAutoMatch] = useState(false);
   const [showMemberAdd, setShowMemberAdd] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [memberAddName, setMemberAddName] = useState("");
   const [participantSearchQuery, setParticipantSearchQuery] = useState("");
   const [priorities, setPriorities] = useState<MatchingPriority[]>([
@@ -313,6 +315,7 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
             participantCount={participants.length}
             gameCount={games.length}
             readOnly={isReadOnly}
+            onFeedbackClick={() => setShowFeedback(true)}
             onRefresh={loadData}
           />
         )}
@@ -379,6 +382,14 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
             setShowMemberAdd(false);
             loadData();
           }}
+        />
+      )}
+
+      {showFeedback && (
+        <FeedbackModal
+          scheduleId={scheduleId}
+          mode={mode}
+          onClose={() => setShowFeedback(false)}
         />
       )}
 
