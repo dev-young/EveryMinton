@@ -326,33 +326,27 @@ export function CourtsTab({
                 {...touchHandlers}
               >
                 <div className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <div
-                      className={
-                        readOnly
-                          ? "grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2"
-                          : "flex flex-wrap items-center gap-2"
-                      }
-                    >
-                      <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
+                  <div className="min-w-0 flex-1">
+                    <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                      <div className="grid min-w-0 grid-cols-2 gap-1">
                         {game.team1.map((id) => (
                           <PlayerChipDetail
                             key={id}
                             member={getMember(id)}
                             participant={participantMap.get(id)}
-                            fill={readOnly}
+                            fill
                             readOnly={readOnly}
                           />
                         ))}
                       </div>
                       <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
-                      <div className={readOnly ? "grid min-w-0 grid-cols-2 gap-1" : "flex gap-1"}>
+                      <div className="grid min-w-0 grid-cols-2 gap-1">
                         {game.team2.map((id) => (
                           <PlayerChipDetail
                             key={id}
                             member={getMember(id)}
                             participant={participantMap.get(id)}
-                            fill={readOnly}
+                            fill
                             readOnly={readOnly}
                           />
                         ))}
