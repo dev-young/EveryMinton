@@ -46,24 +46,24 @@ export function CourtsTab({
     () => new Map(participants.map((participant) => [participant.memberId, participant])),
     [participants]
   );
+  const gameIndexMap = useMemo(
+    () => new Map(games.map((game, index) => [game.id, index])),
+    [games]
+  );
 
   const inProgressGames = games.filter((game) => game.status === "in_progress");
   const waitingGames = games
     .filter((game) => game.status === "waiting")
     .sort((a, b) => {
-      const aMinGph = Math.min(
-        ...[...a.team1, ...a.team2].map((id) => {
-          const participant = participantMap.get(id);
-          return participant ? calculateGPH(participant) : Infinity;
-        })
-      );
-      const bMinGph = Math.min(
-        ...[...b.team1, ...b.team2].map((id) => {
-          const participant = participantMap.get(id);
-          return participant ? calculateGPH(participant) : Infinity;
-        })
-      );
-      return aMinGph - bMinGph;
+      const aCreatedAt = a.createdAt?.getTime() ?? Number.POSITIVE_INFINITY;
+      const bCreatedAt = b.createdAt?.getTime() ?? Number.POSITIVE_INFINITY;
+      const createdAtDiff = aCreatedAt - bCreatedAt;
+      if (createdAtDiff !== 0) return createdAtDiff;
+
+      const indexDiff = (gameIndexMap.get(a.id) ?? 0) - (gameIndexMap.get(b.id) ?? 0);
+      if (indexDiff !== 0) return indexDiff;
+
+      return a.id.localeCompare(b.id);
     });
 
   const courts: (Game | null)[] = [];
@@ -282,7 +282,10 @@ export function CourtsTab({
       {waitingGames.length > 0 && (
         <div className="mt-5">
           <div className="mb-3 flex items-center justify-between">
-            <p className="text-sm font-bold">대기중인 게임</p>
+            <div>
+              <p className="text-sm font-bold">대기중인 게임</p>
+              <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">등록된 순서대로 표시</p>
+            </div>
             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
               {waitingGames.length}개
             </span>

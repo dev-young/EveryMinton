@@ -55,6 +55,7 @@ export interface Game {
   team2: [string, string]; // [memberId, memberId]
   startedAt: Date | null;
   endedAt: Date | null;
+  createdAt?: Date;
 }
 
 // 매칭 우선순위

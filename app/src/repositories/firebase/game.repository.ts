@@ -35,10 +35,12 @@ export class FirebaseGameRepository implements GameRepository {
   }
 
   async create(scheduleId: string, game: Omit<Game, "id">): Promise<Game> {
-    const docRef = await addDoc(this.getRef(scheduleId), this.toFirestore(game));
+    const createdAt = game.createdAt ?? new Date();
+    const docRef = await addDoc(this.getRef(scheduleId), this.toFirestore({ ...game, createdAt }));
     return {
       id: docRef.id,
       ...game,
+      createdAt,
     };
   }
 
@@ -46,12 +48,15 @@ export class FirebaseGameRepository implements GameRepository {
     if (games.length === 0) return [];
 
     const batch = writeBatch(db);
-    const createdGames = games.map((game) => {
+    const batchCreatedAt = Date.now();
+    const createdGames = games.map((game, index) => {
       const docRef = doc(this.getRef(scheduleId));
-      batch.set(docRef, this.toFirestore(game));
+      const createdAt = game.createdAt ?? new Date(batchCreatedAt + index);
+      batch.set(docRef, this.toFirestore({ ...game, createdAt }));
       return {
         id: docRef.id,
         ...game,
+        createdAt,
       };
     });
 
@@ -91,6 +96,7 @@ export class FirebaseGameRepository implements GameRepository {
       team2: data.team2 as [string, string],
       startedAt: (data.startedAt as Timestamp)?.toDate() ?? null,
       endedAt: (data.endedAt as Timestamp)?.toDate() ?? null,
+      createdAt: (data.createdAt as Timestamp)?.toDate(),
     };
   }
 
@@ -99,6 +105,7 @@ export class FirebaseGameRepository implements GameRepository {
       ...game,
       startedAt: game.startedAt ? Timestamp.fromDate(game.startedAt) : null,
       endedAt: game.endedAt ? Timestamp.fromDate(game.endedAt) : null,
+      createdAt: game.createdAt ? Timestamp.fromDate(game.createdAt) : Timestamp.now(),
     };
   }
 
