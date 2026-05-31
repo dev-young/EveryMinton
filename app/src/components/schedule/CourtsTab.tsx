@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Schedule, Game, Participant, Member } from "@/types";
 import { gameRepository, participantRepository } from "@/repositories";
 import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
@@ -296,34 +296,32 @@ export function CourtsTab({
             });
             const canStart = emptyCourts > 0 && !hasPlayingMember;
 
-            let longPressTimer: ReturnType<typeof setTimeout> | null = null;
-
-            function handleTouchStart() {
-              longPressTimer = setTimeout(() => {
-                onEditGame?.(playerIds, game.id);
-              }, 600);
+            function handleEditGame() {
+              onEditGame?.(playerIds, game.id);
             }
 
-            function handleTouchEnd() {
-              if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-              }
-            }
-
-            const touchHandlers = readOnly
+            const editHandlers = readOnly
               ? {}
               : {
-                  onTouchStart: handleTouchStart,
-                  onTouchEnd: handleTouchEnd,
-                  onTouchMove: handleTouchEnd,
+                  role: "button" as const,
+                  tabIndex: 0,
+                  onClick: handleEditGame,
+                  onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleEditGame();
+                    }
+                  },
+                  "aria-label": "대기중인 게임 수정",
                 };
 
             return (
               <div
                 key={game.id}
-                className="mb-3 rounded-xl border border-[var(--color-border)] border-l-4 border-l-amber-400 bg-white p-4 shadow-sm"
-                {...touchHandlers}
+                className={`mb-3 rounded-xl border border-[var(--color-border)] border-l-4 border-l-amber-400 bg-white p-4 shadow-sm ${
+                  readOnly ? "" : "cursor-pointer select-none active:bg-amber-50/40"
+                }`}
+                {...editHandlers}
               >
                 <div className="flex items-center gap-3">
                   <div className="min-w-0 flex-1">
@@ -356,16 +354,22 @@ export function CourtsTab({
                   </div>
 
                   {!readOnly && (
-                    <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5" onClick={(event) => event.stopPropagation()}>
                       <button
-                        onClick={() => startGame(game.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          startGame(game.id);
+                        }}
                         disabled={!canStart}
                         className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
                       >
                         시작
                       </button>
                       <button
-                        onClick={() => cancelGame(game.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          cancelGame(game.id);
+                        }}
                         className="rounded-md bg-[#f1f5f8] px-3 py-1.5 text-[10px] font-semibold text-[var(--color-text-secondary)]"
                       >
                         취소
