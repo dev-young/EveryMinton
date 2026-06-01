@@ -28,11 +28,14 @@ export function ParticipantsTab({
 }: Props) {
   const { showToast } = useToast();
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
+  const [selectedRegisteredIds, setSelectedRegisteredIds] = useState<Set<string>>(new Set());
 
   const waiting = participants.filter((participant) => participant.status === "waiting");
   const playing = participants.filter((participant) => participant.status === "playing");
   const registered = participants.filter((participant) => participant.status === "registered");
   const left = participants.filter((participant) => participant.status === "left");
+  const registeredIdSet = new Set(registered.map((participant) => participant.memberId));
+  const activeSelectedRegisteredIds = [...selectedRegisteredIds].filter((memberId) => registeredIdSet.has(memberId));
 
   async function changeStatus(memberId: string, newStatus: ParticipantStatus) {
     try {
@@ -66,7 +69,55 @@ export function ParticipantsTab({
     }
   }
 
+  function toggleRegisteredSelection(memberId: string) {
+    setSelectedRegisteredIds((current) => {
+      const next = new Set(current);
+      if (next.has(memberId)) {
+        next.delete(memberId);
+      } else {
+        next.add(memberId);
+      }
+      return next;
+    });
+  }
+
+  async function cancelSelectedRegistered() {
+    const memberIds = activeSelectedRegisteredIds;
+    if (memberIds.length === 0) return;
+
+    try {
+      await Promise.all(memberIds.map((memberId) => participantRepository.remove(scheduleId, memberId)));
+      setSelectedRegisteredIds(new Set());
+      onRefresh?.();
+    } catch (error) {
+      console.error("참여 일괄 취소 실패:", error);
+      showToast("참여 일괄 취소에 실패했습니다.");
+    }
+  }
+
+  async function joinSelectedRegistered() {
+    const memberIds = activeSelectedRegisteredIds;
+    if (memberIds.length === 0) return;
+
+    try {
+      const joinedAt = new Date();
+      await participantRepository.updateMany(
+        scheduleId,
+        memberIds.map((memberId) => ({
+          memberId,
+          data: { status: "waiting", joinedAt },
+        }))
+      );
+      setSelectedRegisteredIds(new Set());
+      onRefresh?.();
+    } catch (error) {
+      console.error("참여 일괄 처리 실패:", error);
+      showToast("참여 일괄 처리에 실패했습니다.");
+    }
+  }
+
   const leaveTargetMember = leaveTarget ? getMember(leaveTarget) : undefined;
+  const selectedRegisteredCount = activeSelectedRegisteredIds.length;
 
   return (
     <div className="pb-20">
@@ -120,7 +171,19 @@ export function ParticipantsTab({
       )}
 
       {registered.length > 0 && (
-        <ParticipantGroup title="참여 예정" count={registered.length} color="text-[var(--color-primary)]">
+        <ParticipantGroup
+          title="참여 예정"
+          count={registered.length}
+          color="text-[var(--color-primary)]"
+          headerActions={
+            !readOnly && selectedRegisteredCount > 0 ? (
+              <div className="flex items-center gap-1.5">
+                <BulkActionButton label="취소" color="neutral" onClick={cancelSelectedRegistered} />
+                <BulkActionButton label="참여" color="accent" onClick={joinSelectedRegistered} />
+              </div>
+            ) : null
+          }
+        >
           {registered.map((participant) => (
             <ParticipantItem
               key={participant.memberId}
@@ -128,6 +191,8 @@ export function ParticipantsTab({
               member={getMember(participant.memberId)}
               readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
+              selected={selectedRegisteredIds.has(participant.memberId)}
+              onProfileClick={readOnly ? undefined : () => toggleRegisteredSelection(participant.memberId)}
               actions={
                 readOnly ? null : (
                   <div className="flex gap-1.5">
@@ -195,18 +260,23 @@ function ParticipantGroup({
   title,
   count,
   color,
+  headerActions,
   children,
 }: {
   title: string;
   count: number;
   color: string;
+  headerActions?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <div className="mb-4">
-      <p className={`mb-2 text-xs font-semibold ${color}`}>
-        {title} ({count}명)
-      </p>
+      <div className="mb-2 flex min-h-7 items-center justify-between gap-2">
+        <p className={`text-xs font-semibold ${color}`}>
+          {title} ({count}명)
+        </p>
+        {headerActions}
+      </div>
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
         {children}
       </div>
@@ -220,6 +290,8 @@ function ParticipantItem({
   readOnly = false,
   dimmed,
   onClick,
+  selected = false,
+  onProfileClick,
   actions,
 }: {
   participant: Participant;
@@ -227,6 +299,8 @@ function ParticipantItem({
   readOnly?: boolean;
   dimmed?: boolean;
   onClick?: () => void;
+  selected?: boolean;
+  onProfileClick?: () => void;
   actions: React.ReactNode;
 }) {
   if (!member) return null;
@@ -249,24 +323,73 @@ function ParticipantItem({
       }}
       className={`flex items-center border-b border-[#f4f7f9] px-3.5 py-3 last:border-b-0 ${
         onClick ? "cursor-pointer active:bg-gray-50" : ""
-      } ${dimmed ? "opacity-50" : ""}`}
+      } ${selected ? "bg-blue-50/40" : ""} ${dimmed ? "opacity-50" : ""}`}
     >
       <div
-        className={`mr-3 flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-          isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"
+        role={onProfileClick ? "button" : undefined}
+        tabIndex={onProfileClick ? 0 : undefined}
+        onClick={(event) => {
+          if (!onProfileClick) return;
+          event.stopPropagation();
+          onProfileClick();
+        }}
+        onKeyDown={(event) => {
+          if (!onProfileClick) return;
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            event.stopPropagation();
+            onProfileClick();
+          }
+        }}
+        className={`mr-3 flex min-w-0 flex-1 items-center rounded-lg py-1 pr-2 ${
+          onProfileClick ? "cursor-pointer active:bg-blue-50" : ""
         }`}
       >
-        {member.name.charAt(0)}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold">{member.name}</p>
-        <p className="text-[11px] text-[var(--color-text-muted)]">
-          {isMale ? "남" : "여"} · {levelDisplay}
-          {participant.gamesPlayed > 0 && ` · 게임 ${participant.gamesPlayed}회`}
-        </p>
+        <div
+          className={`mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+            selected
+              ? "bg-[var(--color-primary)] text-white"
+              : isMale
+                ? "bg-blue-50 text-[var(--color-primary)]"
+                : "bg-pink-50 text-pink-600"
+          }`}
+        >
+          {selected ? "✓" : member.name.charAt(0)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold">{member.name}</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">
+            {isMale ? "남" : "여"} · {levelDisplay}
+            {participant.gamesPlayed > 0 && ` · 게임 ${participant.gamesPlayed}회`}
+          </p>
+        </div>
       </div>
       {actions && <div onClick={(event) => event.stopPropagation()}>{actions}</div>}
     </div>
+  );
+}
+
+function BulkActionButton({
+  label,
+  color,
+  onClick,
+}: {
+  label: string;
+  color: "accent" | "neutral";
+  onClick: () => void;
+}) {
+  const colorClass = {
+    accent: "bg-green-50 text-[var(--color-accent)]",
+    neutral: "bg-gray-100 text-[var(--color-text-muted)]",
+  }[color];
+
+  return (
+    <button
+      onClick={onClick}
+      className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold ${colorClass}`}
+    >
+      {label}
+    </button>
   );
 }
 
