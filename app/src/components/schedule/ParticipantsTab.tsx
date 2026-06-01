@@ -192,7 +192,7 @@ export function ParticipantsTab({
               readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               selected={selectedRegisteredIds.has(participant.memberId)}
-              onProfileClick={readOnly ? undefined : () => toggleRegisteredSelection(participant.memberId)}
+              onThumbnailClick={readOnly ? undefined : () => toggleRegisteredSelection(participant.memberId)}
               actions={
                 readOnly ? null : (
                   <div className="flex gap-1.5">
@@ -291,7 +291,7 @@ function ParticipantItem({
   dimmed,
   onClick,
   selected = false,
-  onProfileClick,
+  onThumbnailClick,
   actions,
 }: {
   participant: Participant;
@@ -300,7 +300,7 @@ function ParticipantItem({
   dimmed?: boolean;
   onClick?: () => void;
   selected?: boolean;
-  onProfileClick?: () => void;
+  onThumbnailClick?: () => void;
   actions: React.ReactNode;
 }) {
   if (!member) return null;
@@ -308,6 +308,13 @@ function ParticipantItem({
   const levelInfo = scoreToLevelInfo(member.level);
   const levelDisplay = readOnly ? scoreToViewLevelDisplay(member.level) : levelInfo.display;
   const isMale = member.gender === "male";
+  const thumbnailClass = `mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+    selected
+      ? "bg-[var(--color-primary)] text-white"
+      : isMale
+        ? "bg-blue-50 text-[var(--color-primary)]"
+        : "bg-pink-50 text-pink-600"
+  }`;
 
   return (
     <div
@@ -325,37 +332,22 @@ function ParticipantItem({
         onClick ? "cursor-pointer active:bg-gray-50" : ""
       } ${selected ? "bg-blue-50/40" : ""} ${dimmed ? "opacity-50" : ""}`}
     >
-      <div
-        role={onProfileClick ? "button" : undefined}
-        tabIndex={onProfileClick ? 0 : undefined}
-        onClick={(event) => {
-          if (!onProfileClick) return;
-          event.stopPropagation();
-          onProfileClick();
-        }}
-        onKeyDown={(event) => {
-          if (!onProfileClick) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            event.stopPropagation();
-            onProfileClick();
-          }
-        }}
-        className={`mr-3 flex min-w-0 flex-1 items-center rounded-lg py-1 pr-2 ${
-          onProfileClick ? "cursor-pointer active:bg-blue-50" : ""
-        }`}
-      >
-        <div
-          className={`mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-            selected
-              ? "bg-[var(--color-primary)] text-white"
-              : isMale
-                ? "bg-blue-50 text-[var(--color-primary)]"
-                : "bg-pink-50 text-pink-600"
-          }`}
-        >
-          {selected ? "✓" : member.name.charAt(0)}
-        </div>
+      <div className="mr-3 flex min-w-0 flex-1 items-center py-1 pr-2">
+        {onThumbnailClick ? (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onThumbnailClick();
+            }}
+            aria-label={`${member.name} 선택`}
+            className={`${thumbnailClass} cursor-pointer border-0`}
+          >
+            {selected ? "✓" : member.name.charAt(0)}
+          </button>
+        ) : (
+          <div className={thumbnailClass}>{member.name.charAt(0)}</div>
+        )}
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{member.name}</p>
           <p className="text-[11px] text-[var(--color-text-muted)]">
