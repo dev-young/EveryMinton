@@ -26,7 +26,8 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
         dateStr,
         startStr: lastSchedule.startTime,
         endStr: lastSchedule.endTime,
-        court: lastSchedule.courtCount,
+        court: lastSchedule.courtCount ?? 4,
+        courtUnset: lastSchedule.courtCount === null,
         loc: lastSchedule.location,
       };
     }
@@ -34,7 +35,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
     const startStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
     const end = new Date(now.getTime() + 4 * 60 * 60 * 1000);
     const endStr = `${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
-    return { dateStr, startStr, endStr, court: 4, loc: "" };
+    return { dateStr, startStr, endStr, court: 4, courtUnset: false, loc: "" };
   }
 
   const defaults = getDefaults();
@@ -44,6 +45,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
   const [startTime, setStartTime] = useState(schedule?.startTime ?? defaults.startStr);
   const [endTime, setEndTime] = useState(schedule?.endTime ?? defaults.endStr);
   const [courtCount, setCourtCount] = useState(schedule?.courtCount ?? defaults.court);
+  const [courtCountUnset, setCourtCountUnset] = useState(schedule ? schedule.courtCount === null : defaults.courtUnset);
   const [location, setLocation] = useState(schedule?.location ?? defaults.loc);
   const [saving, setSaving] = useState(false);
 
@@ -134,10 +136,12 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
       showToast("시작/종료 시간을 입력하세요.");
       return;
     }
-    if (courtCount < 1) {
+    if (!courtCountUnset && courtCount < 1) {
       showToast("코트 수는 1 이상이어야 합니다.");
       return;
     }
+
+    const submittedCourtCount = courtCountUnset ? null : courtCount;
 
     setSaving(true);
     try {
@@ -147,7 +151,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
           date,
           startTime,
           endTime,
-          courtCount,
+          courtCount: submittedCourtCount,
           location: location.trim(),
         });
       } else {
@@ -156,7 +160,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
           date,
           startTime,
           endTime,
-          courtCount,
+          courtCount: submittedCourtCount,
           location: location.trim(),
           status: "upcoming",
         });
@@ -273,24 +277,48 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
 
         {/* 코트 수 */}
         <div className="mb-5">
-          <label className="block text-sm font-semibold text-[var(--color-text-secondary)] mb-2">
-            코트 수
-          </label>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className="block text-sm font-semibold text-[var(--color-text-secondary)]">
+              코트 수
+            </label>
+            <button
+              type="button"
+              onClick={() => setCourtCountUnset((value) => !value)}
+              className={`relative h-6 w-11 rounded-full transition-colors ${
+                courtCountUnset ? "bg-[var(--color-primary)]" : "bg-gray-300"
+              }`}
+              aria-pressed={courtCountUnset}
+              aria-label="코트 수 미정"
+            >
+              <span
+                className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                  courtCountUnset ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+          <div className="mb-3 text-xs font-medium text-[var(--color-text-muted)]">
+            코트 수 미정 {courtCountUnset ? "켜짐" : "꺼짐"}
+          </div>
           <div className="flex items-center gap-4">
             <button
+              type="button"
               onClick={() => setCourtCount(Math.max(1, courtCount - 1))}
-              className="w-10 h-10 rounded-lg border border-[var(--color-border)] text-lg font-bold text-[var(--color-text-secondary)] active:bg-gray-100"
+              disabled={courtCountUnset}
+              className="w-10 h-10 rounded-lg border border-[var(--color-border)] text-lg font-bold text-[var(--color-text-secondary)] active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               −
             </button>
-            <span className="text-xl font-bold w-8 text-center">{courtCount}</span>
+            <span className="w-12 text-center text-xl font-bold">{courtCountUnset ? "미정" : courtCount}</span>
             <button
+              type="button"
               onClick={() => setCourtCount(courtCount + 1)}
-              className="w-10 h-10 rounded-lg border border-[var(--color-border)] text-lg font-bold text-[var(--color-text-secondary)] active:bg-gray-100"
+              disabled={courtCountUnset}
+              className="w-10 h-10 rounded-lg border border-[var(--color-border)] text-lg font-bold text-[var(--color-text-secondary)] active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
             >
               +
             </button>
-            <span className="text-sm text-[var(--color-text-muted)]">면</span>
+            {!courtCountUnset && <span className="text-sm text-[var(--color-text-muted)]">면</span>}
           </div>
         </div>
 

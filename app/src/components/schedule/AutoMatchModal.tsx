@@ -32,7 +32,7 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
 
   // 빈 코트 수 계산
   const inProgressGames = games.filter((g) => g.status === "in_progress");
-  const emptyCourts = schedule.courtCount - inProgressGames.length;
+  const emptyCourts = schedule.courtCount === null ? null : Math.max(0, schedule.courtCount - inProgressGames.length);
 
   // 대기중인 게임에 포함된 유저 ID
   const waitingGamePlayerIds = new Set(
@@ -248,7 +248,7 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
 
             {/* 정보 */}
             <p className="text-[11px] text-[var(--color-text-muted)]">
-              대기 인원: {waitingCount}명 · 빈 코트: {emptyCourts}면
+              대기 인원: {waitingCount}명 · 빈 코트: {emptyCourts === null ? "미정" : `${emptyCourts}면`}
             </p>
           </div>
         </div>

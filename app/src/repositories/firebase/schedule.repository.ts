@@ -68,7 +68,7 @@ export class FirebaseScheduleRepository implements ScheduleRepository {
       date: data.date as string,
       startTime: data.startTime as string,
       endTime: data.endTime as string,
-      courtCount: data.courtCount as number,
+      courtCount: typeof data.courtCount === "number" ? data.courtCount : null,
       location: data.location as string,
       status: data.status as Schedule["status"],
       createdAt: (data.createdAt as Timestamp)?.toDate() ?? new Date(),

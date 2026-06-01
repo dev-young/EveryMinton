@@ -63,7 +63,7 @@ export function ScheduleInfoTab({
         <InfoRow label="날짜" value={formatDate(schedule.date)} />
         <InfoRow label="시간" value={`${schedule.startTime} ~ ${schedule.endTime}`} />
         <InfoRow label="장소" value={schedule.location || "미정"} />
-        <InfoRow label="코트 수" value={`${schedule.courtCount}면`} />
+        <InfoRow label="코트 수" value={schedule.courtCount === null ? "미정" : `${schedule.courtCount}면`} />
         <InfoRow label="상태" value={STATUS_LABEL[schedule.status]} highlight />
 
         {!readOnly && (

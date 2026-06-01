@@ -24,7 +24,7 @@ export interface Schedule {
   date: string; // "2025-01-15"
   startTime: string; // "19:00"
   endTime: string; // "22:00"
-  courtCount: number;
+  courtCount: number | null;
   location: string;
   status: ScheduleStatus;
   createdAt: Date;

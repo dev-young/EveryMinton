@@ -66,15 +66,29 @@ export function CourtsTab({
       return a.id.localeCompare(b.id);
     });
 
-  const courts: (Game | null)[] = [];
-  for (let courtNumber = 1; courtNumber <= schedule.courtCount; courtNumber += 1) {
-    const game = inProgressGames.find((item) => item.courtNumber === courtNumber) ?? null;
-    courts.push(game);
-  }
+  const isCourtCountUnset = schedule.courtCount === null;
+  const fixedCourtCount = schedule.courtCount ?? 0;
+  const courtNumbers = isCourtCountUnset
+    ? [...new Set(inProgressGames.map((game) => game.courtNumber).filter((courtNumber) => courtNumber > 0))].sort(
+        (a, b) => a - b
+      )
+    : Array.from({ length: fixedCourtCount }, (_, index) => index + 1);
+  const courts = courtNumbers.map((courtNumber) => ({
+    courtNumber,
+    game: inProgressGames.find((item) => item.courtNumber === courtNumber) ?? null,
+  }));
 
   function getAvailableCourt(): number | null {
     const usedCourts = new Set(inProgressGames.map((game) => game.courtNumber));
-    for (let courtNumber = 1; courtNumber <= schedule.courtCount; courtNumber += 1) {
+    if (isCourtCountUnset) {
+      let courtNumber = 1;
+      while (usedCourts.has(courtNumber)) {
+        courtNumber += 1;
+      }
+      return courtNumber;
+    }
+
+    for (let courtNumber = 1; courtNumber <= fixedCourtCount; courtNumber += 1) {
       if (!usedCourts.has(courtNumber)) return courtNumber;
     }
     return null;
@@ -186,7 +200,7 @@ export function CourtsTab({
     }
   }
 
-  const emptyCourts = courts.filter((game) => game === null).length;
+  const emptyCourts = isCourtCountUnset ? null : courts.filter(({ game }) => game === null).length;
   const endingGame = endingGameId ? games.find((game) => game.id === endingGameId) : null;
 
   return (
@@ -194,11 +208,17 @@ export function CourtsTab({
       <div className="mb-3 flex items-center justify-between">
         <p className="text-sm font-bold">코트 현황</p>
         <p className="text-[11px] text-[var(--color-text-muted)]">
-          사용 {inProgressGames.length} / 전체 {schedule.courtCount}
+          사용 {inProgressGames.length} / 전체 {isCourtCountUnset ? "미정" : schedule.courtCount}
         </p>
       </div>
 
-      {courts.map((game, index) => {
+      {courts.length === 0 && isCourtCountUnset && (
+        <div className="mb-3 rounded-xl border border-dashed border-[var(--color-border)] bg-white px-4 py-6 text-center text-xs text-[var(--color-text-muted)]">
+          진행중인 게임이 없습니다.
+        </div>
+      )}
+
+      {courts.map(({ courtNumber, game }) => {
         let longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
         function clearLongPress() {
@@ -225,7 +245,7 @@ export function CourtsTab({
 
         return (
           <div
-            key={index}
+            key={courtNumber}
             className={`mb-3 rounded-xl border border-[var(--color-border)] bg-white p-4 shadow-sm ${
               game && !readOnly ? "select-none" : ""
             }`}
@@ -235,7 +255,7 @@ export function CourtsTab({
               <div>
                 <div className="mb-2 flex items-start justify-between gap-2">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="text-sm font-bold">코트 {index + 1}</span>
+                    <span className="text-sm font-bold">코트 {courtNumber}</span>
                     <span className="rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-accent)]">
                       진행중 : {game.startedAt && formatElapsed(game.startedAt)}
                     </span>
@@ -267,7 +287,7 @@ export function CourtsTab({
             ) : (
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="text-sm font-bold">코트 {index + 1}</span>
+                  <span className="text-sm font-bold">코트 {courtNumber}</span>
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-text-muted)]">
                     비어있음
                   </span>
@@ -297,7 +317,7 @@ export function CourtsTab({
               const participant = participantMap.get(id);
               return participant?.status === "playing";
             });
-            const canStart = emptyCourts > 0 && !hasPlayingMember;
+            const canStart = (isCourtCountUnset || (emptyCourts ?? 0) > 0) && !hasPlayingMember;
 
             function handleEditGame() {
               onEditGame?.(playerIds, game.id);
