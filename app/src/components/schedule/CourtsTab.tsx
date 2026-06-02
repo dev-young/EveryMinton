@@ -325,19 +325,14 @@ export function CourtsTab({
               const participant = participantMap.get(id);
               return participant?.status === "playing";
             });
-            const playingProgressItems = playerIds.flatMap((id) => {
-              const participant = participantMap.get(id);
-              const playingGame = playingGameByMemberId.get(id);
-              if (participant?.status !== "playing" || !playingGame?.startedAt) return [];
+            function getPlayingElapsed(memberId: string): string | null {
+              const participant = participantMap.get(memberId);
+              const playingGame = playingGameByMemberId.get(memberId);
+              if (participant?.status !== "playing" || !playingGame?.startedAt) return null;
 
-              return [
-                {
-                  memberId: id,
-                  memberName: getMember(id)?.name ?? "이름 없음",
-                  elapsed: formatElapsed(playingGame.startedAt),
-                },
-              ];
-            });
+              return formatElapsed(playingGame.startedAt);
+            }
+
             const canStart = (isCourtCountUnset || (emptyCourts ?? 0) > 0) && !hasPlayingMember;
 
             function handleEditGame() {
@@ -359,6 +354,27 @@ export function CourtsTab({
                   "aria-label": "대기중인 게임 수정",
                 };
 
+            function renderWaitingPlayer(memberId: string) {
+              const participant = participantMap.get(memberId);
+              const elapsed = getPlayingElapsed(memberId);
+
+              return (
+                <div key={memberId} className="min-w-0">
+                  <PlayerChipDetail
+                    member={getMember(memberId)}
+                    participant={participant}
+                    fill
+                    readOnly={readOnly}
+                  />
+                  {elapsed && (
+                    <p className="mt-1 truncate text-center text-[10px] font-medium text-[var(--color-text-muted)]">
+                      게임중 {elapsed}
+                    </p>
+                  )}
+                </div>
+              );
+            }
+
             return (
               <div
                 key={game.id}
@@ -371,27 +387,11 @@ export function CourtsTab({
                   <div className="min-w-0 flex-1">
                     <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
                       <div className="grid min-w-0 grid-cols-2 gap-1">
-                        {game.team1.map((id) => (
-                          <PlayerChipDetail
-                            key={id}
-                            member={getMember(id)}
-                            participant={participantMap.get(id)}
-                            fill
-                            readOnly={readOnly}
-                          />
-                        ))}
+                        {game.team1.map((id) => renderWaitingPlayer(id))}
                       </div>
                       <span className="self-center text-[9.5px] font-bold text-[var(--color-text-muted)]">VS</span>
                       <div className="grid min-w-0 grid-cols-2 gap-1">
-                        {game.team2.map((id) => (
-                          <PlayerChipDetail
-                            key={id}
-                            member={getMember(id)}
-                            participant={participantMap.get(id)}
-                            fill
-                            readOnly={readOnly}
-                          />
-                        ))}
+                        {game.team2.map((id) => renderWaitingPlayer(id))}
                       </div>
                     </div>
                   </div>
@@ -420,20 +420,6 @@ export function CourtsTab({
                     </div>
                   )}
                 </div>
-                {playingProgressItems.length > 0 && (
-                  <div className="mt-3 border-t border-[var(--color-border)] pt-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {playingProgressItems.map((item) => (
-                        <span
-                          key={item.memberId}
-                          className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)]"
-                        >
-                          {item.memberName} 게임중 {item.elapsed}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
