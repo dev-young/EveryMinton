@@ -74,15 +74,20 @@ export function CourtsTab({
 
   const isCourtCountUnset = schedule.courtCount === null;
   const fixedCourtCount = schedule.courtCount ?? 0;
-  const courtNumbers = isCourtCountUnset
-    ? [...new Set(inProgressGames.map((game) => game.courtNumber).filter((courtNumber) => courtNumber > 0))].sort(
-        (a, b) => a - b
-      )
-    : Array.from({ length: fixedCourtCount }, (_, index) => index + 1);
-  const courts = courtNumbers.map((courtNumber) => ({
-    courtNumber,
-    game: inProgressGames.find((item) => item.courtNumber === courtNumber) ?? null,
-  }));
+  const courts = isCourtCountUnset
+    ? [...inProgressGames]
+        .sort((a, b) => compareByStartedAt(a, b, gameIndexMap))
+        .map((game) => ({
+          courtNumber: game.courtNumber,
+          game,
+        }))
+    : Array.from({ length: fixedCourtCount }, (_, index) => {
+        const courtNumber = index + 1;
+        return {
+          courtNumber,
+          game: inProgressGames.find((item) => item.courtNumber === courtNumber) ?? null,
+        };
+      });
 
   function getAvailableCourt(): number | null {
     const usedCourts = new Set(inProgressGames.map((game) => game.courtNumber));
@@ -554,4 +559,16 @@ function formatElapsed(startedAt: Date): string {
   const diffMs = now.getTime() - startedAt.getTime();
   const minutes = Math.floor(diffMs / 60000);
   return `${minutes}분`;
+}
+
+function compareByStartedAt(a: Game, b: Game, gameIndexMap: Map<string, number>): number {
+  const aStartedAt = a.startedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+  const bStartedAt = b.startedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+  const startedAtDiff = aStartedAt - bStartedAt;
+  if (startedAtDiff !== 0) return startedAtDiff;
+
+  const indexDiff = (gameIndexMap.get(a.id) ?? 0) - (gameIndexMap.get(b.id) ?? 0);
+  if (indexDiff !== 0) return indexDiff;
+
+  return a.id.localeCompare(b.id);
 }
