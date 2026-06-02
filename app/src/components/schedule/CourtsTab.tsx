@@ -52,6 +52,12 @@ export function CourtsTab({
   );
 
   const inProgressGames = games.filter((game) => game.status === "in_progress");
+  const playingGameByMemberId = new Map<string, Game>();
+  inProgressGames.forEach((game) => {
+    [...game.team1, ...game.team2].forEach((memberId) => {
+      playingGameByMemberId.set(memberId, game);
+    });
+  });
   const waitingGames = games
     .filter((game) => game.status === "waiting")
     .sort((a, b) => {
@@ -302,10 +308,7 @@ export function CourtsTab({
       {waitingGames.length > 0 && (
         <div className="mt-5">
           <div className="mb-3 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-bold">대기중인 게임</p>
-              <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]">등록된 순서대로 표시</p>
-            </div>
+            <p className="text-sm font-bold">대기중인 게임</p>
             <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
               {waitingGames.length}개
             </span>
@@ -316,6 +319,19 @@ export function CourtsTab({
             const hasPlayingMember = playerIds.some((id) => {
               const participant = participantMap.get(id);
               return participant?.status === "playing";
+            });
+            const playingProgressItems = playerIds.flatMap((id) => {
+              const participant = participantMap.get(id);
+              const playingGame = playingGameByMemberId.get(id);
+              if (participant?.status !== "playing" || !playingGame?.startedAt) return [];
+
+              return [
+                {
+                  memberId: id,
+                  memberName: getMember(id)?.name ?? "이름 없음",
+                  elapsed: formatElapsed(playingGame.startedAt),
+                },
+              ];
             });
             const canStart = (isCourtCountUnset || (emptyCourts ?? 0) > 0) && !hasPlayingMember;
 
@@ -373,7 +389,6 @@ export function CourtsTab({
                         ))}
                       </div>
                     </div>
-                    {hasPlayingMember && <p className="mt-2 text-[11px] text-gray-500">⚠ 게임중인 인원 포함</p>}
                   </div>
 
                   {!readOnly && (
@@ -400,6 +415,20 @@ export function CourtsTab({
                     </div>
                   )}
                 </div>
+                {playingProgressItems.length > 0 && (
+                  <div className="mt-3 border-t border-[var(--color-border)] pt-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {playingProgressItems.map((item) => (
+                        <span
+                          key={item.memberId}
+                          className="rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)]"
+                        >
+                          {item.memberName} 게임중 {item.elapsed}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
