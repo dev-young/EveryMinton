@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import { Schedule, Participant, Game, Member } from "@/types";
 import { gameRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
@@ -20,6 +20,9 @@ interface Props {
 }
 
 type SelectedSlots = [string | null, string | null, string | null, string | null];
+
+const MAX_NAME_FONT_SIZE = 14;
+const MIN_NAME_FONT_SIZE = 10;
 
 function createSelectedSlots(ids: string[] = []): SelectedSlots {
   return [ids[0] ?? null, ids[1] ?? null, ids[2] ?? null, ids[3] ?? null];
@@ -279,12 +282,23 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
                 const levelInfo = scoreToLevelInfo(member.level);
                 const isInWaitingGame = waitingGamePlayerIds.has(p.memberId);
                 const playingMinutes = p.status === "playing" ? getPlayingMinutes(p.memberId) : null;
+                const timeLabel = playingMinutes !== null
+                  ? `게임중 ${playingMinutes}분`
+                  : p.status !== "playing"
+                    ? `대기 ${calculateWaitMinutes(p)}분`
+                    : null;
+                const statusLabel = isInWaitingGame ? "게임 대기중" : p.status === "playing" ? "게임중" : "대기중";
+                const statusColorClass = isInWaitingGame
+                  ? "text-amber-600"
+                  : p.status === "playing"
+                    ? "text-[var(--color-accent)]"
+                    : "text-[var(--color-text-muted)]";
 
                 return (
                   <button
                     key={p.memberId}
                     onClick={() => toggleSelect(p.memberId)}
-                    className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left transition-colors ${
+                    className={`grid min-h-[70px] content-center gap-1 p-3 rounded-xl border-2 text-left transition-colors ${
                       isSelected
                         ? isMale
                           ? "border-[var(--color-primary)] bg-blue-50"
@@ -293,29 +307,28 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
                     } ${!isSelected && selectedCount >= 4 ? "opacity-40" : ""}`}
                     disabled={!isSelected && selectedCount >= 4}
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold truncate ${
-                        isMale ? "text-[var(--color-primary)]" : "text-pink-600"
-                      }`}>{member.name}</p>
-                      <p className="text-[12px] text-[var(--color-text-muted)]">
+                    <div className="flex min-w-0 items-center gap-1">
+                      <AutoSizeName
+                        name={member.name}
+                        className={isMale ? "text-[var(--color-primary)]" : "text-pink-600"}
+                      />
+                      <span className="shrink-0 text-[12px] leading-[18px] text-[var(--color-text-muted)]">
                         {levelInfo.display}
-                        {p.status === "playing" && <span className="text-[var(--color-accent)]"> · 게임중</span>}
-                        {isInWaitingGame && <span className="text-amber-600"> · 게임 대기중</span>}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-[13px] font-bold text-[var(--color-primary)]">
+                      </span>
+                      <span className="ml-auto shrink-0 whitespace-nowrap text-[13px] font-bold leading-[18px] text-[var(--color-primary)]">
                         {calculateGPH(p).toFixed(1)}/h
                       </span>
-                      {p.status !== "playing" && (
-                        <p className="text-[12px] text-[var(--color-text-muted)]">
-                          대기 {calculateWaitMinutes(p)}분
-                        </p>
-                      )}
-                      {playingMinutes !== null && (
-                        <p className="text-[12px] font-semibold text-[var(--color-accent)]">
-                          게임중 {playingMinutes}분
-                        </p>
+                    </div>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span className={`min-w-0 truncate text-[12px] leading-[18px] ${statusColorClass}`}>
+                        {statusLabel}
+                      </span>
+                      {timeLabel && (
+                        <span className={`ml-auto shrink-0 whitespace-nowrap text-[12px] font-semibold leading-[18px] ${
+                          playingMinutes !== null ? "text-[var(--color-accent)]" : "text-[var(--color-text-muted)]"
+                        }`}>
+                          {timeLabel}
+                        </span>
                       )}
                     </div>
                   </button>
@@ -339,6 +352,71 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
         </div>
       </div>
     </div>
+  );
+}
+
+function AutoSizeName({ name, className }: { name: string; className: string }) {
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [fontSize, setFontSize] = useState(MAX_NAME_FONT_SIZE);
+
+  const updateFontSize = useCallback(() => {
+    const container = containerRef.current;
+    const text = textRef.current;
+    if (!container || !text) return;
+
+    const availableWidth = container.clientWidth;
+    if (availableWidth <= 0) return;
+
+    const style = window.getComputedStyle(text);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    context.font = `${style.fontStyle} ${style.fontVariant} ${style.fontWeight} ${MAX_NAME_FONT_SIZE}px ${style.fontFamily}`;
+    const textWidth = context.measureText(name).width;
+    if (textWidth <= 0) return;
+
+    const nextFontSize = Math.max(
+      MIN_NAME_FONT_SIZE,
+      Math.min(MAX_NAME_FONT_SIZE, (availableWidth / textWidth) * MAX_NAME_FONT_SIZE)
+    );
+
+    setFontSize((current) => {
+      const rounded = Math.floor(nextFontSize * 10) / 10;
+      return Math.abs(current - rounded) < 0.1 ? current : rounded;
+    });
+  }, [name]);
+
+  useLayoutEffect(() => {
+    updateFontSize();
+
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", updateFontSize);
+      return () => window.removeEventListener("resize", updateFontSize);
+    }
+
+    const resizeObserver = new ResizeObserver(updateFontSize);
+    resizeObserver.observe(container);
+    window.addEventListener("resize", updateFontSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateFontSize);
+    };
+  }, [updateFontSize]);
+
+  return (
+    <span ref={containerRef} className="min-w-0 shrink overflow-hidden">
+      <span
+        ref={textRef}
+        className={`block whitespace-nowrap font-semibold leading-5 ${className}`}
+        style={{ fontSize: `${fontSize}px` }}
+      >
+        {name}
+      </span>
+    </span>
   );
 }
 
