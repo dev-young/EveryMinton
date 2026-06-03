@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Schedule, Participant, Game, Member } from "@/types";
 import { gameRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
@@ -36,6 +36,7 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
 
   const [selectedIds, setSelectedIds] = useState<SelectedSlots>(() => createSelectedSlots(initialSelectedIds));
   const [filter, setFilter] = useState<"all" | "idle" | "gameWaiting" | "playing">(initialSelectedIds?.length ? "all" : "idle");
+  const [now, setNow] = useState(() => new Date());
   const selectedCount = selectedIds.filter((id): id is string => id !== null).length;
   const firstEmptyIndex = selectedIds.findIndex((id) => id === null);
 
@@ -45,6 +46,17 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
       .filter((g) => g.status === "waiting")
       .flatMap((g) => [...g.team1, ...g.team2])
   );
+  const inProgressGameByMemberId = useMemo(() => {
+    const result = new Map<string, Game>();
+    games
+      .filter((game) => game.status === "in_progress")
+      .forEach((game) => {
+        [...game.team1, ...game.team2].forEach((memberId) => {
+          if (!result.has(memberId)) result.set(memberId, game);
+        });
+      });
+    return result;
+  }, [games]);
 
   const dismiss = useCallback(() => {
     if (closedRef.current) return;
@@ -58,6 +70,11 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
     window.addEventListener("popstate", handlePopState);
     return () => { window.removeEventListener("popstate", handlePopState); };
   }, [dismiss]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 60000);
+    return () => window.clearInterval(interval);
+  }, []);
 
   function closeModal() {
     if (closedRef.current) return;
@@ -140,6 +157,12 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
 
   function removeSlot(index: number) {
     setSelectedIds((current) => current.map((id, currentIndex) => (currentIndex === index ? null : id)) as SelectedSlots);
+  }
+
+  function getPlayingMinutes(memberId: string): number | null {
+    const game = inProgressGameByMemberId.get(memberId);
+    if (!game?.startedAt) return null;
+    return Math.max(0, Math.floor((now.getTime() - game.startedAt.getTime()) / 60000));
   }
 
   async function createGame() {
@@ -255,6 +278,7 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
                 const isMale = member.gender === "male";
                 const levelInfo = scoreToLevelInfo(member.level);
                 const isInWaitingGame = waitingGamePlayerIds.has(p.memberId);
+                const playingMinutes = p.status === "playing" ? getPlayingMinutes(p.memberId) : null;
 
                 return (
                   <button
@@ -286,6 +310,11 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
                       {p.status !== "playing" && (
                         <p className="text-[12px] text-[var(--color-text-muted)]">
                           대기 {calculateWaitMinutes(p)}분
+                        </p>
+                      )}
+                      {playingMinutes !== null && (
+                        <p className="text-[12px] font-semibold text-[var(--color-accent)]">
+                          게임중 {playingMinutes}분
                         </p>
                       )}
                     </div>
