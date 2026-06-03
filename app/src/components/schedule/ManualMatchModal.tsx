@@ -40,6 +40,7 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
   const [selectedIds, setSelectedIds] = useState<SelectedSlots>(() => createSelectedSlots(initialSelectedIds));
   const [filter, setFilter] = useState<"all" | "idle" | "gameWaiting" | "playing">(initialSelectedIds?.length ? "all" : "idle");
   const [now, setNow] = useState(() => new Date());
+  const [swapSourceIndex, setSwapSourceIndex] = useState<number | null>(null);
   const selectedCount = selectedIds.filter((id): id is string => id !== null).length;
   const firstEmptyIndex = selectedIds.findIndex((id) => id === null);
 
@@ -149,17 +150,41 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
   function toggleSelect(memberId: string) {
     const selectedIndex = selectedIds.indexOf(memberId);
     if (selectedIndex >= 0) {
+      setSwapSourceIndex(null);
       setSelectedIds((current) => current.map((id, index) => (index === selectedIndex ? null : id)) as SelectedSlots);
       return;
     }
 
     if (firstEmptyIndex >= 0) {
+      setSwapSourceIndex(null);
       setSelectedIds((current) => current.map((id, index) => (index === firstEmptyIndex ? memberId : id)) as SelectedSlots);
     }
   }
 
   function removeSlot(index: number) {
+    setSwapSourceIndex(null);
     setSelectedIds((current) => current.map((id, currentIndex) => (currentIndex === index ? null : id)) as SelectedSlots);
+  }
+
+  function isOppositeTeam(sourceIndex: number, targetIndex: number) {
+    return sourceIndex < 2 ? targetIndex >= 2 : targetIndex < 2;
+  }
+
+  function startSwap(index: number) {
+    if (selectedCount !== 4) return;
+    setSwapSourceIndex((current) => (current === index ? null : index));
+  }
+
+  function swapSlots(targetIndex: number) {
+    if (swapSourceIndex === null || !isOppositeTeam(swapSourceIndex, targetIndex)) return;
+
+    const sourceIndex = swapSourceIndex;
+    setSelectedIds((current) => {
+      const next = [...current] as SelectedSlots;
+      [next[sourceIndex], next[targetIndex]] = [next[targetIndex], next[sourceIndex]];
+      return next;
+    });
+    setSwapSourceIndex(null);
   }
 
   function getPlayingMinutes(memberId: string): number | null {
@@ -199,6 +224,7 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
         closeModal();
         onSaved();
       } else {
+        setSwapSourceIndex(null);
         setSelectedIds(createSelectedSlots());
         onSaved();
       }
@@ -242,16 +268,56 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
               <div className="flex-1">
                 <p className="text-[10px] font-semibold text-[var(--color-primary)] mb-1.5">팀 A</p>
                 <div className="flex gap-1.5">
-                  <Slot member={slots[0]} index={0} isNext={firstEmptyIndex === 0} onRemove={() => removeSlot(0)} />
-                  <Slot member={slots[1]} index={1} isNext={firstEmptyIndex === 1} onRemove={() => removeSlot(1)} />
+                  <Slot
+                    member={slots[0]}
+                    index={0}
+                    isNext={firstEmptyIndex === 0}
+                    canStartSwap={selectedCount === 4 && swapSourceIndex === null}
+                    isSwapSource={swapSourceIndex === 0}
+                    canSwapTarget={swapSourceIndex !== null && isOppositeTeam(swapSourceIndex, 0)}
+                    onRemove={() => removeSlot(0)}
+                    onStartSwap={() => startSwap(0)}
+                    onSwap={() => swapSlots(0)}
+                  />
+                  <Slot
+                    member={slots[1]}
+                    index={1}
+                    isNext={firstEmptyIndex === 1}
+                    canStartSwap={selectedCount === 4 && swapSourceIndex === null}
+                    isSwapSource={swapSourceIndex === 1}
+                    canSwapTarget={swapSourceIndex !== null && isOppositeTeam(swapSourceIndex, 1)}
+                    onRemove={() => removeSlot(1)}
+                    onStartSwap={() => startSwap(1)}
+                    onSwap={() => swapSlots(1)}
+                  />
                 </div>
               </div>
               <span className="text-xs font-bold text-[var(--color-text-muted)]">VS</span>
               <div className="flex-1">
                 <p className="text-[10px] font-semibold text-[var(--color-accent)] mb-1.5">팀 B</p>
                 <div className="flex gap-1.5">
-                  <Slot member={slots[2]} index={2} isNext={firstEmptyIndex === 2} onRemove={() => removeSlot(2)} />
-                  <Slot member={slots[3]} index={3} isNext={firstEmptyIndex === 3} onRemove={() => removeSlot(3)} />
+                  <Slot
+                    member={slots[2]}
+                    index={2}
+                    isNext={firstEmptyIndex === 2}
+                    canStartSwap={selectedCount === 4 && swapSourceIndex === null}
+                    isSwapSource={swapSourceIndex === 2}
+                    canSwapTarget={swapSourceIndex !== null && isOppositeTeam(swapSourceIndex, 2)}
+                    onRemove={() => removeSlot(2)}
+                    onStartSwap={() => startSwap(2)}
+                    onSwap={() => swapSlots(2)}
+                  />
+                  <Slot
+                    member={slots[3]}
+                    index={3}
+                    isNext={firstEmptyIndex === 3}
+                    canStartSwap={selectedCount === 4 && swapSourceIndex === null}
+                    isSwapSource={swapSourceIndex === 3}
+                    canSwapTarget={swapSourceIndex !== null && isOppositeTeam(swapSourceIndex, 3)}
+                    onRemove={() => removeSlot(3)}
+                    onStartSwap={() => startSwap(3)}
+                    onSwap={() => swapSlots(3)}
+                  />
                 </div>
               </div>
             </div>
@@ -420,34 +486,124 @@ function AutoSizeName({ name, className }: { name: string; className: string }) 
   );
 }
 
-function Slot({ member, index, isNext, onRemove }: { member: Member | null; index: number; isNext: boolean; onRemove: () => void }) {
+function Slot({
+  member,
+  index,
+  isNext,
+  canStartSwap,
+  isSwapSource,
+  canSwapTarget,
+  onRemove,
+  onStartSwap,
+  onSwap,
+}: {
+  member: Member | null;
+  index: number;
+  isNext: boolean;
+  canStartSwap: boolean;
+  isSwapSource: boolean;
+  canSwapTarget: boolean;
+  onRemove: () => void;
+  onStartSwap: () => void;
+  onSwap: () => void;
+}) {
   if (member) {
     const isMale = member.gender === "male";
+    const isSlotActionable = isSwapSource || canSwapTarget;
+    const slotActionLabel = isSwapSource
+      ? `${member.name} 교체 취소`
+      : canSwapTarget
+        ? `${member.name}와 교환`
+        : undefined;
+
+    function handleSlotAction() {
+      if (isSwapSource) {
+        onStartSwap();
+        return;
+      }
+      if (canSwapTarget) onSwap();
+    }
+
+    function handleSlotKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+      if (!isSlotActionable) return;
+      if (e.key !== "Enter" && e.key !== " ") return;
+      e.preventDefault();
+      handleSlotAction();
+    }
+
     return (
       <div
-        className={`flex-1 h-10 rounded-lg flex items-center justify-center text-[11px] font-semibold border-2 relative ${
+        className={`flex-1 h-12 rounded-lg flex items-center justify-center px-1.5 text-[11px] font-semibold border-2 relative ${
           isMale ? "border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]" : "border-pink-400 bg-pink-50 text-pink-600"
-        }`}
+        } ${isSwapSource ? "ring-2 ring-[var(--color-accent)] ring-offset-1" : ""} ${isSlotActionable ? "cursor-pointer" : ""}`}
+        onClick={isSlotActionable ? handleSlotAction : undefined}
+        onKeyDown={isSlotActionable ? handleSlotKeyDown : undefined}
+        role={isSlotActionable ? "button" : undefined}
+        tabIndex={isSlotActionable ? 0 : undefined}
+        aria-label={slotActionLabel}
       >
-        {member.name}
+        <span className="max-w-full truncate px-3">{member.name}</span>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-400 text-white rounded-full text-[9px] flex items-center justify-center"
+          aria-label={`${member.name} 선택 해제`}
         >
           ✕
         </button>
+        {canStartSwap && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onStartSwap(); }}
+            className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-[var(--color-border)] bg-white/95 text-[var(--color-primary)] shadow-sm"
+            aria-label={`${member.name} 교체 시작`}
+            title="교체"
+          >
+            <SwapIcon />
+          </button>
+        )}
+        {canSwapTarget && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onSwap(); }}
+            className="absolute bottom-0.5 right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-accent)] text-white shadow-sm"
+            aria-label={`${member.name}와 교환`}
+            title="교환"
+          >
+            <SwapIcon />
+          </button>
+        )}
       </div>
     );
   }
 
   return (
     <div
-      className={`flex-1 h-10 rounded-lg border-2 border-dashed flex items-center justify-center text-[11px] ${
+      className={`flex-1 h-12 rounded-lg border-2 border-dashed flex items-center justify-center text-[11px] ${
         isNext ? "border-[var(--color-primary)] bg-blue-50/30 text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"
       }`}
     >
       {index + 1}번
     </div>
+  );
+}
+
+function SwapIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className="h-3 w-3"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="1.8"
+    >
+      <path d="M3 5h8" />
+      <path d="M9 3l2 2-2 2" />
+      <path d="M13 11H5" />
+      <path d="M7 9l-2 2 2 2" />
+    </svg>
   );
 }
 
