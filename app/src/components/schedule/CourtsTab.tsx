@@ -20,6 +20,12 @@ interface Props {
   onRefresh?: () => void;
 }
 
+interface EndGameSnapshot {
+  game: Game;
+  participants: Participant[];
+  endedAt: Date;
+}
+
 export function CourtsTab({
   scheduleId,
   schedule,
@@ -33,7 +39,7 @@ export function CourtsTab({
   onRefresh,
 }: Props) {
   const { showToast } = useToast();
-  const [endingGameId, setEndingGameId] = useState<string | null>(null);
+  const [endingGameIds, setEndingGameIds] = useState<Set<string>>(() => new Set());
   const [cancellingGameId, setCancellingGameId] = useState<string | null>(null);
   const [, setTick] = useState(0);
 
@@ -138,11 +144,50 @@ export function CourtsTab({
   }
 
   async function endGame(gameId: string) {
+    if (endingGameIds.has(gameId)) return;
+
+    setEndingGameIds((prev) => {
+      const next = new Set(prev);
+      next.add(gameId);
+      return next;
+    });
+
     try {
-      const game = games.find((item) => item.id === gameId);
-      if (!game) return;
+      const game =
+        (await gameRepository.getById(scheduleId, gameId)) ??
+        games.find((item) => item.id === gameId);
+      if (!game || game.status !== "in_progress") {
+        showToast("진행중인 게임을 찾을 수 없습니다.");
+        return;
+      }
+
+      const playerIds = [...game.team1, ...game.team2];
+      const participantSnapshots = await Promise.all(
+        playerIds.map(async (memberId) => {
+          const participant = await participantRepository.get(scheduleId, memberId);
+          return participant ?? participantMap.get(memberId) ?? null;
+        })
+      );
+
+      const participantsBeforeEnd = participantSnapshots.filter(
+        (participant): participant is Participant => participant !== null
+      );
+
+      if (participantsBeforeEnd.length !== playerIds.length) {
+        showToast("참여자 정보를 불러오지 못했습니다.");
+        return;
+      }
 
       const now = new Date();
+      const snapshot: EndGameSnapshot = {
+        game: copyGame(game),
+        participants: participantsBeforeEnd.map((participant) => copyParticipant(participant)),
+        endedAt: now,
+      };
+      const participantSnapshotMap = new Map(
+        snapshot.participants.map((participant) => [participant.memberId, participant])
+      );
+
       await gameRepository.update(scheduleId, gameId, {
         status: "completed",
         endedAt: now,
@@ -151,7 +196,7 @@ export function CourtsTab({
       await participantRepository.updateMany(
         scheduleId,
         [...game.team1, ...game.team2].map((memberId) => {
-          const participant = participantMap.get(memberId);
+          const participant = participantSnapshotMap.get(memberId);
           return {
             memberId,
             data: {
@@ -163,12 +208,59 @@ export function CourtsTab({
         })
       );
 
-      setEndingGameId(null);
       onRefresh?.();
-      showToast("게임이 종료되었습니다.", "success");
+      showToast("게임이 종료되었습니다.", "success", {
+        label: "실행 취소",
+        onClick: () => undoEndGame(snapshot),
+      });
     } catch (error) {
       console.error("게임 종료 실패:", error);
       showToast("게임 종료에 실패했습니다.");
+    } finally {
+      setEndingGameIds((prev) => {
+        const next = new Set(prev);
+        next.delete(gameId);
+        return next;
+      });
+    }
+  }
+
+  async function undoEndGame(snapshot: EndGameSnapshot) {
+    try {
+      const currentGame = await gameRepository.getById(scheduleId, snapshot.game.id);
+      if (!canRestoreEndedGame(currentGame, snapshot)) {
+        showToast("실행 취소할 수 없는 상태입니다.");
+        return;
+      }
+
+      await participantRepository.updateMany(
+        scheduleId,
+        snapshot.participants.map((participant) => ({
+          memberId: participant.memberId,
+          data: {
+            status: participant.status,
+            joinedAt: participant.joinedAt,
+            leftAt: participant.leftAt,
+            gamesPlayed: participant.gamesPlayed,
+            lastGameEndedAt: participant.lastGameEndedAt,
+          },
+        }))
+      );
+
+      await gameRepository.update(scheduleId, snapshot.game.id, {
+        status: snapshot.game.status,
+        courtNumber: snapshot.game.courtNumber,
+        team1: snapshot.game.team1,
+        team2: snapshot.game.team2,
+        startedAt: snapshot.game.startedAt,
+        endedAt: snapshot.game.endedAt,
+      });
+
+      onRefresh?.();
+      showToast("게임 종료를 취소했습니다.", "success");
+    } catch (error) {
+      console.error("게임 종료 실행 취소 실패:", error);
+      showToast("실행 취소에 실패했습니다.");
     }
   }
 
@@ -212,8 +304,6 @@ export function CourtsTab({
   }
 
   const emptyCourts = isCourtCountUnset ? null : courts.filter(({ game }) => game === null).length;
-  const endingGame = endingGameId ? games.find((game) => game.id === endingGameId) : null;
-
   return (
     <div className="pb-20">
       <div className="mb-3 flex items-center justify-between">
@@ -274,8 +364,9 @@ export function CourtsTab({
                   {!readOnly && (
                     <button
                       onPointerDown={(event) => event.stopPropagation()}
-                      onClick={() => setEndingGameId(game.id)}
-                      className="shrink-0 rounded-md bg-[var(--color-danger)] px-2.5 py-1 text-[10px] font-semibold text-white"
+                      onClick={() => void endGame(game.id)}
+                      disabled={endingGameIds.has(game.id)}
+                      className="shrink-0 rounded-md bg-[var(--color-danger)] px-2.5 py-1 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
                     >
                       종료
                     </button>
@@ -443,17 +534,6 @@ export function CourtsTab({
         </div>
       )}
 
-      {endingGameId && (
-        <ConfirmDialog
-          title="게임 종료"
-          message={`코트${endingGame?.courtNumber ?? ""} 경기를 종료하시겠습니까?`}
-          confirmLabel="종료"
-          danger
-          onCancel={() => setEndingGameId(null)}
-          onConfirm={() => endGame(endingGameId)}
-        />
-      )}
-
       {cancellingGameId && (
         <ConfirmDialog
           title="게임 취소"
@@ -538,6 +618,39 @@ function calculateGPH(participant: Participant): number {
   if (minutesElapsed <= 0) return 0;
 
   return (participant.gamesPlayed / minutesElapsed) * 60;
+}
+
+function copyGame(game: Game): Game {
+  return {
+    ...game,
+    team1: [...game.team1] as [string, string],
+    team2: [...game.team2] as [string, string],
+    startedAt: copyDate(game.startedAt),
+    endedAt: copyDate(game.endedAt),
+    createdAt: game.createdAt ? new Date(game.createdAt.getTime()) : undefined,
+  };
+}
+
+function copyParticipant(participant: Participant): Participant {
+  return {
+    ...participant,
+    joinedAt: copyDate(participant.joinedAt),
+    leftAt: copyDate(participant.leftAt),
+    lastGameEndedAt: copyDate(participant.lastGameEndedAt),
+  };
+}
+
+function copyDate(date: Date | null | undefined): Date | null {
+  return date ? new Date(date.getTime()) : null;
+}
+
+function canRestoreEndedGame(game: Game | null, snapshot: EndGameSnapshot): boolean {
+  if (!game || game.status !== "completed" || !game.endedAt) return false;
+  if (game.endedAt.getTime() !== snapshot.endedAt.getTime()) return false;
+
+  const currentPlayerIds = [...game.team1, ...game.team2].sort();
+  const snapshotPlayerIds = [...snapshot.game.team1, ...snapshot.game.team2].sort();
+  return currentPlayerIds.every((memberId, index) => memberId === snapshotPlayerIds[index]);
 }
 
 function formatElapsed(startedAt: Date): string {
