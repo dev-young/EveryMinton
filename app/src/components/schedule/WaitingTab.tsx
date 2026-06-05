@@ -1,21 +1,31 @@
 "use client";
 
-import { Participant, Member } from "@/types";
+import { Participant, Member, Schedule } from "@/types";
 import { scoreToLevelInfo } from "@/lib/level";
+import {
+  calculateGamesPerHour,
+  calculateWaitMinutes,
+  getScheduleStatReferenceAt,
+  shouldShowWaitingTime,
+} from "@/lib/participantStats";
 
 interface Props {
+  schedule: Schedule;
   participants: Participant[];
   getMember: (id: string) => Member | undefined;
 }
 
-export function WaitingTab({ participants, getMember }: Props) {
+export function WaitingTab({ schedule, participants, getMember }: Props) {
+  const statReferenceAt = getScheduleStatReferenceAt(schedule);
+  const showWaitingTime = shouldShowWaitingTime(schedule);
+
   // 대기중인 참여자만 (시간당 게임 횟수 낮은 순 정렬)
   const waitingParticipants = participants
     .filter((p) => p.status === "waiting")
     .map((p) => {
       const member = getMember(p.memberId);
-      const gph = calculateGPH(p);
-      const waitMinutes = calculateWaitMinutes(p);
+      const gph = calculateGamesPerHour(p, statReferenceAt);
+      const waitMinutes = calculateWaitMinutes(p, statReferenceAt);
       return { ...p, member, gph, waitMinutes };
     })
     .sort((a, b) => a.gph - b.gph);
@@ -73,9 +83,11 @@ export function WaitingTab({ participants, getMember }: Props) {
               {/* 통계 */}
               <div className="text-right">
                 <div className="text-xs font-bold">{item.gph.toFixed(1)} 게임/h</div>
-                <div className="text-[11px] text-[var(--color-text-muted)]">
-                  대기 {item.waitMinutes}분
-                </div>
+                {showWaitingTime && (
+                  <div className="text-[11px] text-[var(--color-text-muted)]">
+                    대기 {item.waitMinutes}분
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -83,19 +95,4 @@ export function WaitingTab({ participants, getMember }: Props) {
       </div>
     </div>
   );
-}
-
-function calculateGPH(participant: Participant): number {
-  if (!participant.joinedAt) return 0;
-  const now = new Date();
-  const minutesElapsed = (now.getTime() - participant.joinedAt.getTime()) / 60000;
-  if (minutesElapsed <= 0) return 0;
-  return (participant.gamesPlayed / minutesElapsed) * 60;
-}
-
-function calculateWaitMinutes(participant: Participant): number {
-  const reference = participant.lastGameEndedAt ?? participant.joinedAt;
-  if (!reference) return 0;
-  const now = new Date();
-  return Math.floor((now.getTime() - reference.getTime()) / 60000);
 }

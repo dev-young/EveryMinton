@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Schedule, Game, Participant, Member } from "@/types";
 import { gameRepository, participantRepository } from "@/repositories";
 import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
+import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -58,6 +59,7 @@ export function CourtsTab({
   );
 
   const inProgressGames = games.filter((game) => game.status === "in_progress");
+  const statReferenceAt = getScheduleStatReferenceAt(schedule);
   const playingGameByMemberId = new Map<string, Game>();
   inProgressGames.forEach((game) => {
     [...game.team1, ...game.team2].forEach((memberId) => {
@@ -454,6 +456,7 @@ export function CourtsTab({
                   <PlayerChipDetail
                     member={getMember(memberId)}
                     participant={participant}
+                    statReferenceAt={statReferenceAt}
                     fill
                     readOnly={readOnly}
                   />
@@ -579,11 +582,13 @@ function PlayerChip({
 function PlayerChipDetail({
   member,
   participant,
+  statReferenceAt,
   fill = false,
   readOnly = false,
 }: {
   member: Member | undefined;
   participant: Participant | undefined;
+  statReferenceAt: Date;
   fill?: boolean;
   readOnly?: boolean;
 }) {
@@ -592,7 +597,7 @@ function PlayerChipDetail({
   const isMale = member.gender === "male";
   const levelInfo = scoreToLevelInfo(member.level);
   const levelDisplay = readOnly ? scoreToViewLevelDisplay(member.level) : levelInfo.display;
-  const gph = participant ? calculateGPH(participant) : 0;
+  const gph = participant ? calculateGamesPerHour(participant, statReferenceAt) : 0;
   const isPlaying = participant?.status === "playing";
   const bgColor = isPlaying
     ? `bg-gray-100 ${isMale ? "text-[var(--color-primary)]" : "text-pink-600"}`
@@ -608,16 +613,6 @@ function PlayerChipDetail({
       </span>
     </span>
   );
-}
-
-function calculateGPH(participant: Participant): number {
-  if (!participant.joinedAt) return 0;
-
-  const now = new Date();
-  const minutesElapsed = (now.getTime() - participant.joinedAt.getTime()) / 60000;
-  if (minutesElapsed <= 0) return 0;
-
-  return (participant.gamesPlayed / minutesElapsed) * 60;
 }
 
 function copyGame(game: Game): Game {

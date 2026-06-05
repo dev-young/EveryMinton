@@ -4,6 +4,12 @@ import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } fr
 import { Schedule, Participant, Game, Member } from "@/types";
 import { gameRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
+import {
+  calculateGamesPerHour,
+  calculateWaitMinutes,
+  getScheduleStatReferenceAt,
+  shouldShowWaitingTime,
+} from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
@@ -28,7 +34,17 @@ function createSelectedSlots(ids: string[] = []): SelectedSlots {
   return [ids[0] ?? null, ids[1] ?? null, ids[2] ?? null, ids[3] ?? null];
 }
 
-export function ManualMatchModal({ scheduleId, participants, games, getMember, initialSelectedIds, editingGameId, onClose, onSaved }: Props) {
+export function ManualMatchModal({
+  scheduleId,
+  schedule,
+  participants,
+  games,
+  getMember,
+  initialSelectedIds,
+  editingGameId,
+  onClose,
+  onSaved,
+}: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
   const closedRef = useRef(false);
@@ -43,6 +59,8 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
   const [swapSourceIndex, setSwapSourceIndex] = useState<number | null>(null);
   const selectedCount = selectedIds.filter((id): id is string => id !== null).length;
   const firstEmptyIndex = selectedIds.findIndex((id) => id === null);
+  const statReferenceAt = getScheduleStatReferenceAt(schedule, now);
+  const showWaitingTime = shouldShowWaitingTime(schedule);
 
   // 대기중인 게임에 포함된 유저 ID
   const waitingGamePlayerIds = new Set(
@@ -144,7 +162,7 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
       const priorityDiff = getPriority(a) - getPriority(b);
       if (priorityDiff !== 0) return priorityDiff;
       // 2차 정렬: 시간당 게임 횟수 낮은 순
-      return calculateGPH(a) - calculateGPH(b);
+      return calculateGamesPerHour(a, statReferenceAt) - calculateGamesPerHour(b, statReferenceAt);
     });
 
   function toggleSelect(memberId: string) {
@@ -350,8 +368,8 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
                 const playingMinutes = p.status === "playing" ? getPlayingMinutes(p.memberId) : null;
                 const timeLabel = playingMinutes !== null
                   ? `게임중 ${playingMinutes}분`
-                  : p.status !== "playing"
-                    ? `대기 ${calculateWaitMinutes(p)}분`
+                  : p.status !== "playing" && showWaitingTime
+                    ? `대기 ${calculateWaitMinutes(p, statReferenceAt)}분`
                     : null;
                 const statusLabel = isInWaitingGame ? "게임 대기중" : p.status === "playing" ? "게임중" : "대기중";
                 const statusColorClass = isInWaitingGame
@@ -382,7 +400,7 @@ export function ManualMatchModal({ scheduleId, participants, games, getMember, i
                         {levelInfo.display}
                       </span>
                       <span className="ml-auto shrink-0 whitespace-nowrap text-[13px] font-bold leading-[18px] text-[var(--color-primary)]">
-                        {calculateGPH(p).toFixed(1)}/h
+                        {calculateGamesPerHour(p, statReferenceAt).toFixed(1)}/h
                       </span>
                     </div>
                     <div className="flex min-w-0 items-center gap-1.5">
@@ -620,18 +638,4 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
       {label}
     </button>
   );
-}
-
-function calculateGPH(participant: Participant): number {
-  if (!participant.joinedAt) return 0;
-  const now = new Date();
-  const minutesElapsed = (now.getTime() - participant.joinedAt.getTime()) / 60000;
-  if (minutesElapsed <= 0) return 0;
-  return (participant.gamesPlayed / minutesElapsed) * 60;
-}
-
-function calculateWaitMinutes(participant: Participant): number {
-  const reference = participant.lastGameEndedAt ?? participant.joinedAt;
-  if (!reference) return 0;
-  return Math.floor((new Date().getTime() - reference.getTime()) / 60000);
 }

@@ -1,4 +1,5 @@
 import { Participant, Member, Game, MatchingPriority } from "@/types";
+import { calculateGamesPerHour } from "@/lib/participantStats";
 
 interface MatchCandidate {
   memberId: string;
@@ -26,10 +27,16 @@ export function generateMatches(
   options: {
     includePlayingMembers: boolean;
     gameCount: number;
+    referenceAt?: Date;
   }
 ): MatchResult[] {
   // 매칭 대상 후보 구성
-  const candidates = getCandidates(participants, members, options.includePlayingMembers);
+  const candidates = getCandidates(
+    participants,
+    members,
+    options.includePlayingMembers,
+    options.referenceAt ?? new Date()
+  );
 
   if (candidates.length < 4) return [];
 
@@ -58,7 +65,8 @@ export function generateMatches(
 function getCandidates(
   participants: Participant[],
   members: Member[],
-  includePlayingMembers: boolean
+  includePlayingMembers: boolean,
+  referenceAt: Date
 ): MatchCandidate[] {
   return participants
     .filter((p) => {
@@ -73,7 +81,7 @@ function getCandidates(
         memberId: p.memberId,
         member,
         participant: p,
-        gph: calculateGPH(p),
+        gph: calculateGamesPerHour(p, referenceAt),
       };
     })
     .filter((c): c is MatchCandidate => c !== null);
@@ -161,18 +169,6 @@ function assignTeams(
     team1: [selected[0].memberId, selected[1].memberId],
     team2: [selected[2].memberId, selected[3].memberId],
   };
-}
-
-/**
- * 시간당 게임 횟수 계산
- */
-function calculateGPH(participant: Participant): number {
-  if (!participant.joinedAt) return 0;
-  const now = new Date();
-  const minutesElapsed =
-    (now.getTime() - participant.joinedAt.getTime()) / 60000;
-  if (minutesElapsed <= 0) return 0;
-  return (participant.gamesPlayed / minutesElapsed) * 60;
 }
 
 /**

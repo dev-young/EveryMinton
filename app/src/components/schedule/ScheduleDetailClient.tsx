@@ -284,7 +284,9 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
           />
         )}
 
-        {activeTab === "waiting" && <WaitingTab participants={participants} getMember={getMember} />}
+        {activeTab === "waiting" && (
+          <WaitingTab schedule={schedule} participants={participants} getMember={getMember} />
+        )}
 
         {activeTab === "participants" && (
           <ParticipantsTab

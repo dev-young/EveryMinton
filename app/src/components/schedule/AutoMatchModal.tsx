@@ -5,6 +5,7 @@ import { Schedule, Participant, Member, Game, MatchingPriority } from "@/types";
 import { gameRepository } from "@/repositories";
 import { generateMatches } from "@/lib/matching";
 import { scoreToLevelInfo } from "@/lib/level";
+import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 
@@ -50,6 +51,7 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
 
   const [saving, setSaving] = useState(false);
   const [preview, setPreview] = useState<{ team1: [string, string]; team2: [string, string] }[]>([]);
+  const statReferenceAt = useMemo(() => getScheduleStatReferenceAt(schedule), [schedule]);
   const memberMap = useMemo(
     () => new Map(members.map((member) => [member.id, member])),
     [members]
@@ -122,9 +124,10 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
     const results = generateMatches(participants, members, games, priorities, {
       includePlayingMembers,
       gameCount,
+      referenceAt: statReferenceAt,
     });
     setPreview(results);
-  }, [gameCount, games, includePlayingMembers, members, participants, priorities]);
+  }, [gameCount, games, includePlayingMembers, members, participants, priorities, statReferenceAt]);
 
   // 미리보기 자동 생성
   useEffect(() => {
@@ -142,11 +145,8 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
 
   function getGPH(id: string): string {
     const p = getParticipant(id);
-    if (!p || !p.joinedAt) return "0.0";
-    const now = new Date();
-    const minutes = (now.getTime() - p.joinedAt.getTime()) / 60000;
-    if (minutes <= 0) return "0.0";
-    return ((p.gamesPlayed / minutes) * 60).toFixed(1);
+    if (!p) return "0.0";
+    return calculateGamesPerHour(p, statReferenceAt).toFixed(1);
   }
 
   async function handleConfirm() {
