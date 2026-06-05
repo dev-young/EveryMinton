@@ -291,6 +291,7 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
         {activeTab === "participants" && (
           <ParticipantsTab
             scheduleId={scheduleId}
+            schedule={schedule}
             participants={participants}
             getMember={getMember}
             readOnly={isReadOnly}

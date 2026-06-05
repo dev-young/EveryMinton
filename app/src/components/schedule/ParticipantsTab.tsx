@@ -1,14 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Participant, Member, ParticipantStatus } from "@/types";
+import { Participant, Member, ParticipantStatus, Schedule } from "@/types";
 import { participantRepository } from "@/repositories";
 import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
+import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Props {
   scheduleId: string;
+  schedule: Schedule;
   participants: Participant[];
   getMember: (id: string) => Member | undefined;
   readOnly?: boolean;
@@ -19,6 +21,7 @@ interface Props {
 
 export function ParticipantsTab({
   scheduleId,
+  schedule,
   participants,
   getMember,
   readOnly = false,
@@ -30,10 +33,9 @@ export function ParticipantsTab({
   const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
   const [selectedRegisteredIds, setSelectedRegisteredIds] = useState<Set<string>>(new Set());
 
-  const waiting = participants.filter((participant) => participant.status === "waiting");
-  const playing = participants.filter((participant) => participant.status === "playing");
+  const active = participants.filter((participant) => participant.status === "waiting" || participant.status === "playing");
   const registered = participants.filter((participant) => participant.status === "registered");
-  const left = participants.filter((participant) => participant.status === "left");
+  const statReferenceAt = getScheduleStatReferenceAt(schedule);
   const registeredIdSet = new Set(registered.map((participant) => participant.memberId));
   const activeSelectedRegisteredIds = [...selectedRegisteredIds].filter((memberId) => registeredIdSet.has(memberId));
 
@@ -132,32 +134,14 @@ export function ParticipantsTab({
         </div>
       )}
 
-      {playing.length > 0 && (
-        <ParticipantGroup title="게임중" count={playing.length} color="text-[var(--color-warning)]">
-          {playing.map((participant) => (
+      {active.length > 0 && (
+        <ParticipantGroup title="참여중" count={active.length} color="text-[var(--color-accent)]">
+          {active.map((participant) => (
             <ParticipantItem
               key={participant.memberId}
               participant={participant}
               member={getMember(participant.memberId)}
-              readOnly={readOnly}
-              onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
-              actions={
-                readOnly ? null : (
-                  <StatusButton label="퇴장" color="danger" onClick={() => handleLeave(participant.memberId)} />
-                )
-              }
-            />
-          ))}
-        </ParticipantGroup>
-      )}
-
-      {waiting.length > 0 && (
-        <ParticipantGroup title="대기중" count={waiting.length} color="text-[var(--color-accent)]">
-          {waiting.map((participant) => (
-            <ParticipantItem
-              key={participant.memberId}
-              participant={participant}
-              member={getMember(participant.memberId)}
+              statText={`${calculateGamesPerHour(participant, statReferenceAt).toFixed(1)}/h`}
               readOnly={readOnly}
               onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
               actions={
@@ -214,23 +198,7 @@ export function ParticipantsTab({
         </ParticipantGroup>
       )}
 
-      {left.length > 0 && (
-        <ParticipantGroup title="퇴장" count={left.length} color="text-[var(--color-text-muted)]">
-          {left.map((participant) => (
-            <ParticipantItem
-              key={participant.memberId}
-              participant={participant}
-              member={getMember(participant.memberId)}
-              readOnly={readOnly}
-              onClick={readOnly ? undefined : () => onMemberClick?.(participant.memberId)}
-              dimmed
-              actions={null}
-            />
-          ))}
-        </ParticipantGroup>
-      )}
-
-      {participants.length === 0 && (
+      {active.length === 0 && registered.length === 0 && (
         <div className="py-12 text-center text-[var(--color-text-muted)]">
           <p className="mb-2 text-3xl">👥</p>
           <p className="text-sm">참여자가 없습니다</p>
@@ -287,6 +255,7 @@ function ParticipantGroup({
 function ParticipantItem({
   participant,
   member,
+  statText,
   readOnly = false,
   dimmed,
   onClick,
@@ -296,6 +265,7 @@ function ParticipantItem({
 }: {
   participant: Participant;
   member: Member | undefined;
+  statText?: string;
   readOnly?: boolean;
   dimmed?: boolean;
   onClick?: () => void;
@@ -352,6 +322,7 @@ function ParticipantItem({
           <p className="truncate text-sm font-semibold">{member.name}</p>
           <p className="text-[11px] text-[var(--color-text-muted)]">
             {isMale ? "남" : "여"} · {levelDisplay}
+            {statText && ` · ${statText}`}
             {participant.gamesPlayed > 0 && ` · 게임 ${participant.gamesPlayed}회`}
           </p>
         </div>
