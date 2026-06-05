@@ -261,32 +261,32 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
               {preview.map((match, index) => (
                 <div key={index} className="bg-white rounded-xl border border-[var(--color-border)] p-3 relative">
                   <span className="absolute -top-2 left-3 bg-white px-1.5 text-[10px] font-semibold text-[var(--color-text-muted)]">게임 {index + 1}</span>
-                  <div className="flex items-center justify-center gap-2 flex-wrap">
-                    <div className="flex gap-1">
+                  <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-stretch gap-2">
+                    <div className="grid min-w-0 grid-cols-2 gap-1">
                       {match.team1.map((id) => {
                         const m = getMember(id);
                         if (!m) return null;
                         const isMale = m.gender === "male";
                         const levelInfo = scoreToLevelInfo(m.level);
                         return (
-                          <span key={id} className={`text-xs px-2 py-1.5 rounded-md font-medium flex flex-col items-center ${isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"}`}>
-                            <span>{m.name}</span>
-                            <span className="text-[9px] opacity-60">{levelInfo.display} · {getGPH(id)}/h</span>
+                          <span key={id} className={`flex w-full min-w-0 flex-col items-center rounded-md px-2 py-1.5 text-xs font-medium ${isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"}`}>
+                            <span className="max-w-full truncate">{m.name}</span>
+                            <span className="max-w-full truncate text-[9px] opacity-60">{levelInfo.display} · {getGPH(id)}/h</span>
                           </span>
                         );
                       })}
                     </div>
-                    <span className="text-[11px] font-bold text-[var(--color-text-muted)]">VS</span>
-                    <div className="flex gap-1">
+                    <span className="self-center text-[11px] font-bold text-[var(--color-text-muted)]">VS</span>
+                    <div className="grid min-w-0 grid-cols-2 gap-1">
                       {match.team2.map((id) => {
                         const m = getMember(id);
                         if (!m) return null;
                         const isMale = m.gender === "male";
                         const levelInfo = scoreToLevelInfo(m.level);
                         return (
-                          <span key={id} className={`text-xs px-2 py-1.5 rounded-md font-medium flex flex-col items-center ${isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"}`}>
-                            <span>{m.name}</span>
-                            <span className="text-[9px] opacity-60">{levelInfo.display} · {getGPH(id)}/h</span>
+                          <span key={id} className={`flex w-full min-w-0 flex-col items-center rounded-md px-2 py-1.5 text-xs font-medium ${isMale ? "bg-blue-50 text-[var(--color-primary)]" : "bg-pink-50 text-pink-600"}`}>
+                            <span className="max-w-full truncate">{m.name}</span>
+                            <span className="max-w-full truncate text-[9px] opacity-60">{levelInfo.display} · {getGPH(id)}/h</span>
                           </span>
                         );
                       })}
