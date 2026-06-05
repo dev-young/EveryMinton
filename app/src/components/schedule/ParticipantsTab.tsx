@@ -38,6 +38,8 @@ export function ParticipantsTab({
   const statReferenceAt = getScheduleStatReferenceAt(schedule);
   const registeredIdSet = new Set(registered.map((participant) => participant.memberId));
   const activeSelectedRegisteredIds = [...selectedRegisteredIds].filter((memberId) => registeredIdSet.has(memberId));
+  const selectedRegisteredCount = activeSelectedRegisteredIds.length;
+  const allRegisteredSelected = registered.length > 0 && selectedRegisteredCount === registered.length;
 
   async function changeStatus(memberId: string, newStatus: ParticipantStatus) {
     try {
@@ -83,6 +85,20 @@ export function ParticipantsTab({
     });
   }
 
+  function toggleAllRegisteredSelection() {
+    setSelectedRegisteredIds((current) => {
+      const next = new Set(current);
+
+      if (allRegisteredSelected) {
+        registered.forEach((participant) => next.delete(participant.memberId));
+      } else {
+        registered.forEach((participant) => next.add(participant.memberId));
+      }
+
+      return next;
+    });
+  }
+
   async function cancelSelectedRegistered() {
     const memberIds = activeSelectedRegisteredIds;
     if (memberIds.length === 0) return;
@@ -119,7 +135,6 @@ export function ParticipantsTab({
   }
 
   const leaveTargetMember = leaveTarget ? getMember(leaveTarget) : undefined;
-  const selectedRegisteredCount = activeSelectedRegisteredIds.length;
 
   return (
     <div className="pb-20">
@@ -160,10 +175,19 @@ export function ParticipantsTab({
           count={registered.length}
           color="text-[var(--color-primary)]"
           headerActions={
-            !readOnly && selectedRegisteredCount > 0 ? (
-              <div className="flex items-center gap-1.5">
-                <BulkActionButton label="취소" color="neutral" onClick={cancelSelectedRegistered} />
-                <BulkActionButton label="참여" color="accent" onClick={joinSelectedRegistered} />
+            !readOnly ? (
+              <div className="flex flex-wrap items-center justify-end gap-1.5">
+                <BulkActionButton
+                  label={allRegisteredSelected ? "선택 해제" : "전체 선택"}
+                  color="primary"
+                  onClick={toggleAllRegisteredSelection}
+                />
+                {selectedRegisteredCount > 0 && (
+                  <>
+                    <BulkActionButton label="취소" color="neutral" onClick={cancelSelectedRegistered} />
+                    <BulkActionButton label="참여" color="accent" onClick={joinSelectedRegistered} />
+                  </>
+                )}
               </div>
             ) : null
           }
@@ -338,12 +362,13 @@ function BulkActionButton({
   onClick,
 }: {
   label: string;
-  color: "accent" | "neutral";
+  color: "accent" | "neutral" | "primary";
   onClick: () => void;
 }) {
   const colorClass = {
     accent: "bg-green-50 text-[var(--color-accent)]",
     neutral: "bg-gray-100 text-[var(--color-text-muted)]",
+    primary: "bg-blue-50 text-[var(--color-primary)]",
   }[color];
 
   return (
