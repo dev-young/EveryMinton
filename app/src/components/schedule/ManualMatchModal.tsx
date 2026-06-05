@@ -266,12 +266,14 @@ export function ManualMatchModal({
       <div
         ref={sheetRef}
         className="bg-white rounded-t-2xl w-full max-w-3xl max-h-[90vh] flex flex-col"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         {/* 핸들 */}
-        <div className="pt-4 px-6">
+        <div
+          className="touch-none pt-4 px-6"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="w-9 h-1 bg-[var(--color-border)] rounded-full mx-auto mb-4" />
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">수동 매칭</h2>
@@ -351,7 +353,7 @@ export function ManualMatchModal({
         </div>
 
         {/* 참여자 목록 */}
-        <div className="flex-1 overflow-y-auto px-6 pb-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-4 [-webkit-overflow-scrolling:touch]">
           {selectableParticipants.length === 0 ? (
             <div className="flex h-full min-h-32 items-center justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-white px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
               조건에 맞는 참여자가 없습니다.
