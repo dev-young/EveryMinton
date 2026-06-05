@@ -284,10 +284,10 @@ export function ManualMatchModal({
         {/* 팀 슬롯 */}
         <div className="px-6 pb-4">
           <div className="bg-[var(--color-bg)] rounded-xl p-3">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+              <div className="min-w-0">
                 <p className="text-[10px] font-semibold text-[var(--color-primary)] mb-1.5">팀 A</p>
-                <div className="flex gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   <Slot
                     member={slots[0]}
                     index={0}
@@ -313,9 +313,9 @@ export function ManualMatchModal({
                 </div>
               </div>
               <span className="text-xs font-bold text-[var(--color-text-muted)]">VS</span>
-              <div className="flex-1">
+              <div className="min-w-0">
                 <p className="text-[10px] font-semibold text-[var(--color-accent)] mb-1.5">팀 B</p>
-                <div className="flex gap-1.5">
+                <div className="grid grid-cols-2 gap-1.5">
                   <Slot
                     member={slots[2]}
                     index={2}
@@ -553,7 +553,7 @@ function Slot({
 
     return (
       <div
-        className={`flex-1 h-12 rounded-lg flex items-center justify-center px-1.5 text-[11px] font-semibold border-2 relative ${
+        className={`relative flex h-12 w-full min-w-0 items-center justify-center rounded-lg border-2 px-1.5 text-[11px] font-semibold ${
           isMale ? "border-[var(--color-primary)] bg-blue-50 text-[var(--color-primary)]" : "border-pink-400 bg-pink-50 text-pink-600"
         } ${isSwapSource ? "ring-2 ring-[var(--color-accent)] ring-offset-1" : ""} ${isSlotActionable ? "cursor-pointer" : ""}`}
         onClick={isSlotActionable ? handleSlotAction : undefined}
@@ -562,7 +562,7 @@ function Slot({
         tabIndex={isSlotActionable ? 0 : undefined}
         aria-label={slotActionLabel}
       >
-        <span className="max-w-full truncate px-3">{member.name}</span>
+        <span className="block w-full min-w-0 truncate px-5 text-center">{member.name}</span>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-400 text-white rounded-full text-[9px] flex items-center justify-center"
@@ -598,7 +598,7 @@ function Slot({
 
   return (
     <div
-      className={`flex-1 h-12 rounded-lg border-2 border-dashed flex items-center justify-center text-[11px] ${
+      className={`flex h-12 w-full min-w-0 items-center justify-center rounded-lg border-2 border-dashed text-[11px] ${
         isNext ? "border-[var(--color-primary)] bg-blue-50/30 text-[var(--color-primary)]" : "border-[var(--color-border)] text-[var(--color-text-muted)]"
       }`}
     >
