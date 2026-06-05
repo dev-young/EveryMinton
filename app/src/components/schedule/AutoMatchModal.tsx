@@ -8,6 +8,7 @@ import { scoreToLevelInfo } from "@/lib/level";
 import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useModalHistory } from "@/hooks/useModalHistory";
 
 interface Props {
   scheduleId: string;
@@ -23,7 +24,7 @@ interface Props {
 export function AutoMatchModal({ scheduleId, schedule, participants, members, games, priorities, onClose, onSaved }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
-  const closedRef = useRef(false);
+  const { closeWithHistory } = useModalHistory({ onClose });
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const dragging = useRef(false);
@@ -61,24 +62,8 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
     [participants]
   );
 
-  const dismiss = useCallback(() => {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    onClose();
-  }, [onClose]);
-
-  useEffect(() => {
-    window.history.pushState({ modal: true }, "");
-    function handlePopState() { dismiss(); }
-    window.addEventListener("popstate", handlePopState);
-    return () => { window.removeEventListener("popstate", handlePopState); };
-  }, [dismiss]);
-
   function closeModal() {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    window.history.back();
-    onClose();
+    closeWithHistory();
   }
 
   // 드래그 닫기
@@ -169,11 +154,7 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
         }))
       );
 
-      if (!closedRef.current) {
-        closedRef.current = true;
-        window.history.back();
-        onSaved();
-      }
+      closeWithHistory(onSaved);
       showToast(`${preview.length}개 게임이 생성되었습니다.`, "success");
     } catch (error) {
       console.error("자동 매칭 실패:", error);

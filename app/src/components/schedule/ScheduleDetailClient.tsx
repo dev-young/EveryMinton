@@ -398,7 +398,6 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
         <MemberAddModal
           member={null}
           defaultName={memberAddName}
-          manageHistory={false}
           onClose={() => setShowMemberAdd(false)}
           onSaved={() => {
             setShowMemberAdd(false);

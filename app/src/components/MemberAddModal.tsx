@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { Member, Gender, LevelGrade, LevelSubGrade } from "@/types";
 import { memberRepository } from "@/repositories";
 import { calculateScore } from "@/lib/level";
 import { scoreToLevelInfo } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useModalHistory } from "@/hooks/useModalHistory";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Props {
@@ -25,7 +26,10 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
   const { showToast } = useToast();
   useLockBodyScroll();
   const existingLevel = member ? scoreToLevelInfo(member.level) : null;
-  const closedRef = useRef(false);
+  const { closeWithHistory } = useModalHistory({
+    enabled: manageHistory,
+    onClose,
+  });
   const confirmedDuplicateNameRef = useRef<string | null>(null);
 
   const [name, setName] = useState(member?.name ?? defaultName ?? "");
@@ -46,35 +50,8 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
   const dragging = useRef(false);
   const dragCurrentY = useRef(0);
 
-  const dismiss = useCallback(() => {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    onClose();
-  }, [onClose]);
-
-  // 안드로이드 백버튼 대응
-  useEffect(() => {
-    if (!manageHistory) return;
-
-    window.history.pushState({ modal: true }, "");
-
-    function handlePopState() {
-      dismiss();
-    }
-
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [dismiss, manageHistory]);
-
   function closeModal() {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    if (manageHistory) {
-      window.history.back();
-    }
-    onClose();
+    closeWithHistory();
   }
 
   function handleTouchStart(e: React.TouchEvent) {
@@ -159,13 +136,7 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
           gender,
           level: score,
         });
-        if (!closedRef.current) {
-          closedRef.current = true;
-          if (manageHistory) {
-            window.history.back();
-          }
-          onSaved();
-        }
+        closeWithHistory(onSaved);
       } else {
         await memberRepository.create({
           name: name.trim(),
@@ -177,13 +148,7 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
           setName("");
           onSavedContinue?.();
         } else {
-          if (!closedRef.current) {
-            closedRef.current = true;
-            if (manageHistory) {
-              window.history.back();
-            }
-            onSaved();
-          }
+          closeWithHistory(onSaved);
         }
       }
     } catch (error) {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Member, Participant } from "@/types";
 import { participantRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useModalHistory } from "@/hooks/useModalHistory";
 
 interface Props {
   scheduleId: string;
@@ -50,7 +51,6 @@ function resolveSearchTerms(query: string, members: Member[]): string[] {
 export function AddParticipantModal({ scheduleId, members, existingParticipants, searchQuery, suspendHistoryClose = false, onSaved, onAddMember, onSearchQueryChange }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
-  const closedRef = useRef(false);
   const onSavedRef = useRef(onSaved);
   const suspendHistoryCloseRef = useRef(suspendHistoryClose);
   const ignoreHistoryCloseUntilRef = useRef(0);
@@ -91,36 +91,21 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
     searchInput.style.overflowY = contentHeight > maxHeight ? "auto" : "hidden";
   }, [searchQuery]);
 
-  const dismiss = useCallback(() => {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    onSavedRef.current();
-  }, []);
-
-  useEffect(() => {
-    window.history.pushState({ modal: true }, "");
-
-    function handlePopState() {
+  const { closeWithHistory } = useModalHistory({
+    onClose: () => onSavedRef.current(),
+    shouldIgnoreBack: () => {
       if (
         suspendHistoryCloseRef.current ||
         Date.now() < ignoreHistoryCloseUntilRef.current
       ) {
-        return;
+        return true;
       }
-      dismiss();
-    }
-
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [dismiss]);
+      return false;
+    },
+  });
 
   function closeModal() {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    window.history.back();
-    onSavedRef.current();
+    closeWithHistory();
   }
 
   async function addParticipant(member: Member) {

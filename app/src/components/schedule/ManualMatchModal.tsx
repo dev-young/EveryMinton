@@ -12,6 +12,7 @@ import {
 } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useModalHistory } from "@/hooks/useModalHistory";
 
 interface Props {
   scheduleId: string;
@@ -47,7 +48,7 @@ export function ManualMatchModal({
 }: Props) {
   const { showToast } = useToast();
   useLockBodyScroll();
-  const closedRef = useRef(false);
+  const { closeWithHistory } = useModalHistory({ onClose });
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef(0);
   const dragging = useRef(false);
@@ -80,29 +81,13 @@ export function ManualMatchModal({
     return result;
   }, [games]);
 
-  const dismiss = useCallback(() => {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    onClose();
-  }, [onClose]);
-
-  useEffect(() => {
-    window.history.pushState({ modal: true }, "");
-    function handlePopState() { dismiss(); }
-    window.addEventListener("popstate", handlePopState);
-    return () => { window.removeEventListener("popstate", handlePopState); };
-  }, [dismiss]);
-
   useEffect(() => {
     const interval = window.setInterval(() => setNow(new Date()), 60000);
     return () => window.clearInterval(interval);
   }, []);
 
   function closeModal() {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    window.history.back();
-    onClose();
+    closeWithHistory();
   }
 
   // 드래그 닫기

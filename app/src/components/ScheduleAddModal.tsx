@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useRef } from "react";
 import { Schedule } from "@/types";
 import { scheduleRepository } from "@/repositories";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useModalHistory } from "@/hooks/useModalHistory";
 
 interface Props {
   schedule: Schedule | null;
@@ -15,7 +16,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
   const { showToast } = useToast();
   useLockBodyScroll();
   const isEdit = schedule !== null;
-  const closedRef = useRef(false);
+  const { closeWithHistory } = useModalHistory({ onClose });
 
   function getDefaults() {
     const now = new Date();
@@ -54,36 +55,9 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
   const dragging = useRef(false);
   const dragCurrentY = useRef(0);
 
-  // 닫기 함수 (중복 호출 방지)
-  const dismiss = useCallback(() => {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    onClose();
-  }, [onClose]);
-
-  // 안드로이드 백버튼 대응
-  useEffect(() => {
-    window.history.pushState({ modal: true }, "");
-
-    function handlePopState() {
-      dismiss();
-    }
-
-    window.addEventListener("popstate", handlePopState);
-    return () => {
-      window.removeEventListener("popstate", handlePopState);
-    };
-  }, [dismiss]);
-
   // X 버튼, 배경 탭, 드래그 닫기 시 호출
   function closeModal() {
-    if (closedRef.current) return;
-    closedRef.current = true;
-    // pushState로 추가한 히스토리 제거
-    window.history.back();
-    // popstate에서 onClose가 호출되지만 closedRef로 중복 방지됨
-    // 직접 onClose 호출
-    onClose();
+    closeWithHistory();
   }
 
   // 드래그 닫기
@@ -166,11 +140,7 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
         });
       }
       // 저장 성공: 히스토리 정리 후 onSaved 호출
-      if (!closedRef.current) {
-        closedRef.current = true;
-        window.history.back();
-        onSaved();
-      }
+      closeWithHistory(onSaved);
     } catch (error) {
       console.error("저장 실패:", error);
       showToast("저장에 실패했습니다.");

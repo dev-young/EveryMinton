@@ -5,6 +5,7 @@ import type { FeedbackMode } from "@/types";
 import { feedbackRepository } from "@/repositories";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
+import { useModalHistory } from "@/hooks/useModalHistory";
 
 interface Props {
   scheduleId: string;
@@ -17,6 +18,7 @@ export function FeedbackModal({ scheduleId, mode, onClose }: Props) {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   useLockBodyScroll();
+  const { closeWithHistory } = useModalHistory({ onClose });
 
   async function submitFeedback() {
     const trimmedMessage = message.trim();
@@ -31,7 +33,7 @@ export function FeedbackModal({ scheduleId, mode, onClose }: Props) {
         pageUrl: window.location.href,
       });
       showToast("피드백을 보냈습니다.", "success");
-      onClose();
+      closeWithHistory();
     } catch (error) {
       console.error("피드백 저장 실패:", error);
       showToast("피드백 저장에 실패했습니다.");
@@ -44,7 +46,7 @@ export function FeedbackModal({ scheduleId, mode, onClose }: Props) {
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50"
       onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) closeWithHistory();
       }}
     >
       <div className="w-full max-w-3xl rounded-t-2xl bg-white p-6 shadow-xl">
@@ -54,7 +56,7 @@ export function FeedbackModal({ scheduleId, mode, onClose }: Props) {
           <h2 className="text-lg font-bold">피드백</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => closeWithHistory()}
             className="px-1 text-xl text-[var(--color-text-muted)]"
             aria-label="닫기"
           >
