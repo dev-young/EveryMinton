@@ -1,4 +1,5 @@
 import { ScheduleDetailClient } from "@/components/schedule/ScheduleDetailClient";
+import { normalizeScheduleDetailTab } from "@/lib/scheduleTabs";
 
 interface Props {
   params: Promise<{ id: string }> | { id: string };
@@ -8,7 +9,7 @@ interface Props {
 export default async function ScheduleDetailPage({ params, searchParams }: Props) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const initialTab = resolvedSearchParams.tab === "participants" ? "participants" : undefined;
+  const initialTab = normalizeScheduleDetailTab(resolvedSearchParams.tab);
 
   return <ScheduleDetailClient scheduleId={resolvedParams.id} mode="admin" initialTab={initialTab} />;
 }

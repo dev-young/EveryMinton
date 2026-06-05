@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Game, Member, MatchingPriority, Participant, Schedule } from "@/types";
 import { gameRepository, memberRepository, participantRepository, scheduleRepository } from "@/repositories";
+import { normalizeScheduleDetailTab, type ScheduleDetailTab } from "@/lib/scheduleTabs";
 import { ParticipantsTab } from "@/components/schedule/ParticipantsTab";
 import { ScheduleInfoTab } from "@/components/schedule/ScheduleInfoTab";
 import { CourtsTab } from "@/components/schedule/CourtsTab";
@@ -21,10 +22,8 @@ type Mode = "admin" | "view";
 interface Props {
   scheduleId: string;
   mode: Mode;
-  initialTab?: Tab;
+  initialTab?: ScheduleDetailTab;
 }
-
-type Tab = "courts" | "waiting" | "participants" | "settings" | "info";
 
 interface ScheduleDetailData {
   schedule: Schedule | null;
@@ -37,6 +36,10 @@ function formatDateShort(dateStr: string): string {
   const date = new Date(`${dateStr}T00:00:00`);
   const days = ["일", "월", "화", "수", "목", "금", "토"];
   return `${date.getMonth() + 1}월 ${date.getDate()}일 (${days[date.getDay()]})`;
+}
+
+function normalizeTab(tab: string | null | undefined, isReadOnly: boolean): ScheduleDetailTab {
+  return normalizeScheduleDetailTab(tab, isReadOnly);
 }
 
 async function getVisibleMembers(participants: Participant[], games: Game[]): Promise<Member[]> {
@@ -109,7 +112,7 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [activeTab, setActiveTab] = useState<ScheduleDetailTab>(() => normalizeTab(initialTab, isReadOnly));
   const [showAddParticipant, setShowAddParticipant] = useState(false);
   const [showManualMatch, setShowManualMatch] = useState(false);
   const [manualMatchInitialIds, setManualMatchInitialIds] = useState<string[]>([]);
@@ -184,6 +187,29 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
     [memberMap]
   );
 
+  useEffect(() => {
+    function syncTabFromUrl() {
+      const nextTab = normalizeTab(new URLSearchParams(window.location.search).get("tab"), isReadOnly);
+      setActiveTab(nextTab);
+    }
+
+    window.addEventListener("popstate", syncTabFromUrl);
+    return () => window.removeEventListener("popstate", syncTabFromUrl);
+  }, [isReadOnly]);
+
+  function selectTab(tab: ScheduleDetailTab) {
+    const nextTab = normalizeTab(tab, isReadOnly);
+    setActiveTab(nextTab);
+
+    const url = new URL(window.location.href);
+    if (nextTab === "courts") {
+      url.searchParams.delete("tab");
+    } else {
+      url.searchParams.set("tab", nextTab);
+    }
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
   async function copyShareLink() {
     try {
       const url = `${window.location.origin}/view/schedule/${scheduleId}`;
@@ -243,21 +269,21 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
       </header>
 
       <div className="sticky top-0 z-40 flex border-b border-[var(--color-border)] bg-white">
-        <TabButton label="코트" active={activeTab === "courts"} onClick={() => setActiveTab("courts")} />
-        <TabButton label="대기" active={activeTab === "waiting"} onClick={() => setActiveTab("waiting")} />
+        <TabButton label="코트" active={activeTab === "courts"} onClick={() => selectTab("courts")} />
+        <TabButton label="대기" active={activeTab === "waiting"} onClick={() => selectTab("waiting")} />
         <TabButton
           label="참여자"
           active={activeTab === "participants"}
-          onClick={() => setActiveTab("participants")}
+          onClick={() => selectTab("participants")}
         />
         {!isReadOnly && (
           <TabButton
             label="매칭설정"
             active={activeTab === "settings"}
-            onClick={() => setActiveTab("settings")}
+            onClick={() => selectTab("settings")}
           />
         )}
-        <TabButton label="일정정보" active={activeTab === "info"} onClick={() => setActiveTab("info")} />
+        <TabButton label="일정정보" active={activeTab === "info"} onClick={() => selectTab("info")} />
       </div>
 
       <div className={`flex-1 p-4 ${isReadOnly ? "pb-24" : ""}`}>
@@ -301,7 +327,7 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
             }}
             onMemberClick={(memberId) => {
               const returnTo = `/schedule/${scheduleId}?tab=participants`;
-              window.history.replaceState(window.history.state, "", returnTo);
+              selectTab("participants");
               router.push(`/members/${memberId}?${new URLSearchParams({ returnTo }).toString()}`);
             }}
             onRefresh={loadData}
