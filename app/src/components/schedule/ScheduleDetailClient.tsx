@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Game, Member, MatchingPriority, Participant, Schedule } from "@/types";
 import { gameRepository, memberRepository, participantRepository, scheduleRepository } from "@/repositories";
 import { normalizeScheduleDetailTab, type ScheduleDetailTab } from "@/lib/scheduleTabs";
@@ -103,6 +103,8 @@ async function copyText(text: string) {
 
 export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const isReadOnly = mode === "view";
 
@@ -112,7 +114,7 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<ScheduleDetailTab>(() => normalizeTab(initialTab, isReadOnly));
+  const activeTab = normalizeTab(searchParams.get("tab") ?? initialTab, isReadOnly);
   const [showAddParticipant, setShowAddParticipant] = useState(false);
   const [showManualMatch, setShowManualMatch] = useState(false);
   const [manualMatchInitialIds, setManualMatchInitialIds] = useState<string[]>([]);
@@ -187,27 +189,18 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
     [memberMap]
   );
 
-  useEffect(() => {
-    function syncTabFromUrl() {
-      const nextTab = normalizeTab(new URLSearchParams(window.location.search).get("tab"), isReadOnly);
-      setActiveTab(nextTab);
-    }
-
-    window.addEventListener("popstate", syncTabFromUrl);
-    return () => window.removeEventListener("popstate", syncTabFromUrl);
-  }, [isReadOnly]);
-
   function selectTab(tab: ScheduleDetailTab) {
     const nextTab = normalizeTab(tab, isReadOnly);
-    setActiveTab(nextTab);
 
-    const url = new URL(window.location.href);
+    const nextSearchParams = new URLSearchParams(searchParams.toString());
     if (nextTab === "courts") {
-      url.searchParams.delete("tab");
+      nextSearchParams.delete("tab");
     } else {
-      url.searchParams.set("tab", nextTab);
+      nextSearchParams.set("tab", nextTab);
     }
-    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+
+    const query = nextSearchParams.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   async function copyShareLink() {
