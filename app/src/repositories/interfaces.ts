@@ -58,6 +58,10 @@ export interface GameRepository {
     gameId: string,
     data: Partial<Omit<Game, "id">>
   ): Promise<void>;
+  updateMany(
+    scheduleId: string,
+    updates: { gameId: string; data: Partial<Omit<Game, "id">> }[]
+  ): Promise<void>;
   delete(scheduleId: string, gameId: string): Promise<void>;
   getActiveGames(scheduleId: string): Promise<Game[]>;
 }

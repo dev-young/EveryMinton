@@ -73,6 +73,20 @@ export class FirebaseGameRepository implements GameRepository {
     await updateDoc(docRef, this.toFirestoreUpdate(data));
   }
 
+  async updateMany(
+    scheduleId: string,
+    updates: { gameId: string; data: Partial<Omit<Game, "id">> }[]
+  ): Promise<void> {
+    if (updates.length === 0) return;
+
+    const batch = writeBatch(db);
+    updates.forEach(({ gameId, data }) => {
+      const docRef = doc(db, "schedules", scheduleId, "games", gameId);
+      batch.update(docRef, this.toFirestoreUpdate(data));
+    });
+    await batch.commit();
+  }
+
   async delete(scheduleId: string, gameId: string): Promise<void> {
     const docRef = doc(db, "schedules", scheduleId, "games", gameId);
     await deleteDoc(docRef);
@@ -125,6 +139,10 @@ export class FirebaseGameRepository implements GameRepository {
       firestoreData.endedAt = data.endedAt
         ? Timestamp.fromDate(data.endedAt)
         : null;
+    if (data.createdAt !== undefined)
+      firestoreData.createdAt = data.createdAt
+        ? Timestamp.fromDate(data.createdAt)
+        : Timestamp.now();
 
     return firestoreData;
   }

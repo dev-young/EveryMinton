@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { Schedule, Game, Participant, Member } from "@/types";
 import { gameRepository, participantRepository } from "@/repositories";
 import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
@@ -42,6 +42,10 @@ export function CourtsTab({
   const { showToast } = useToast();
   const [endingGameIds, setEndingGameIds] = useState<Set<string>>(() => new Set());
   const [cancellingGameId, setCancellingGameId] = useState<string | null>(null);
+  const [isReorderingWaitingGames, setIsReorderingWaitingGames] = useState(false);
+  const [orderedWaitingGameIds, setOrderedWaitingGameIds] = useState<string[]>([]);
+  const [draggingWaitingGameId, setDraggingWaitingGameId] = useState<string | null>(null);
+  const [savingWaitingOrder, setSavingWaitingOrder] = useState(false);
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -79,6 +83,15 @@ export function CourtsTab({
 
       return a.id.localeCompare(b.id);
     });
+  const waitingGameById = new Map(waitingGames.map((game) => [game.id, game]));
+  const displayedWaitingGames = isReorderingWaitingGames
+    ? [
+        ...orderedWaitingGameIds
+          .map((gameId) => waitingGameById.get(gameId))
+          .filter((game): game is Game => game !== undefined),
+        ...waitingGames.filter((game) => !orderedWaitingGameIds.includes(game.id)),
+      ]
+    : waitingGames;
 
   const isCourtCountUnset = schedule.courtCount === null;
   const fixedCourtCount = schedule.courtCount ?? 0;
@@ -305,6 +318,108 @@ export function CourtsTab({
     }
   }
 
+  function startWaitingGameReorder() {
+    setOrderedWaitingGameIds(waitingGames.map((game) => game.id));
+    setIsReorderingWaitingGames(true);
+  }
+
+  function cancelWaitingGameReorder() {
+    setOrderedWaitingGameIds(waitingGames.map((game) => game.id));
+    setDraggingWaitingGameId(null);
+    setIsReorderingWaitingGames(false);
+  }
+
+  function moveWaitingGame(draggingGameId: string, targetGameId: string) {
+    if (draggingGameId === targetGameId) return;
+
+    setOrderedWaitingGameIds((current) => {
+      const waitingIds = waitingGames.map((game) => game.id);
+      const next = current.filter((gameId) => waitingIds.includes(gameId));
+      waitingIds.forEach((gameId) => {
+        if (!next.includes(gameId)) next.push(gameId);
+      });
+
+      const fromIndex = next.indexOf(draggingGameId);
+      const toIndex = next.indexOf(targetGameId);
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return current;
+
+      const [draggingId] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, draggingId);
+      return next;
+    });
+  }
+
+  function handleWaitingGameDragStart(event: PointerEvent<HTMLButtonElement>, gameId: string) {
+    if (!isReorderingWaitingGames || savingWaitingOrder) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDraggingWaitingGameId(gameId);
+  }
+
+  function handleWaitingGameDragMove(event: PointerEvent<HTMLButtonElement>) {
+    if (!draggingWaitingGameId || savingWaitingOrder) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const targetElement = document
+      .elementFromPoint(event.clientX, event.clientY)
+      ?.closest<HTMLElement>("[data-waiting-game-id]");
+    const targetGameId = targetElement?.dataset.waitingGameId;
+    if (!targetGameId) return;
+
+    moveWaitingGame(draggingWaitingGameId, targetGameId);
+  }
+
+  function handleWaitingGameDragEnd(event: PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setDraggingWaitingGameId(null);
+  }
+
+  async function saveWaitingGameOrder() {
+    const orderedGames = displayedWaitingGames;
+    if (orderedGames.length < 2 || savingWaitingOrder) return;
+
+    const baseCreatedAts = waitingGames.map((game, index) => {
+      return game.createdAt ? new Date(game.createdAt.getTime()) : new Date(Date.now() + index);
+    });
+
+    const updates = orderedGames
+      .map((game, index) => {
+        const nextCreatedAt = baseCreatedAts[index];
+        const currentCreatedAt = game.createdAt;
+        if (currentCreatedAt && currentCreatedAt.getTime() === nextCreatedAt.getTime()) return null;
+
+        return {
+          gameId: game.id,
+          data: { createdAt: nextCreatedAt },
+        };
+      })
+      .filter((update): update is { gameId: string; data: { createdAt: Date } } => update !== null);
+
+    try {
+      setSavingWaitingOrder(true);
+      if (updates.length > 0) {
+        await gameRepository.updateMany(scheduleId, updates);
+      }
+      setIsReorderingWaitingGames(false);
+      setDraggingWaitingGameId(null);
+      onRefresh?.();
+      showToast("대기중인 게임 순서를 저장했습니다.", "success");
+    } catch (error) {
+      console.error("대기중인 게임 순서 저장 실패:", error);
+      showToast("순서 저장에 실패했습니다.");
+    } finally {
+      setSavingWaitingOrder(false);
+    }
+  }
+
   const emptyCourts = isCourtCountUnset ? null : courts.filter(({ game }) => game === null).length;
   return (
     <div className="pb-20">
@@ -405,14 +520,48 @@ export function CourtsTab({
 
       {waitingGames.length > 0 && (
         <div className="mt-5">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between gap-2">
             <p className="text-sm font-bold">대기중인 게임</p>
-            <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
-              {waitingGames.length}개
-            </span>
+            <div className="flex items-center gap-1.5">
+              {isReorderingWaitingGames ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={cancelWaitingGameReorder}
+                    disabled={savingWaitingOrder}
+                    className="rounded-md bg-gray-100 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--color-text-muted)] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void saveWaitingGameOrder()}
+                    disabled={savingWaitingOrder}
+                    className="rounded-md bg-[var(--color-primary)] px-2.5 py-1.5 text-[11px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+                  >
+                    {savingWaitingOrder ? "저장중" : "저장"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {!readOnly && waitingGames.length >= 2 && (
+                    <button
+                      type="button"
+                      onClick={startWaitingGameReorder}
+                      className="rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-600"
+                    >
+                      순서변경
+                    </button>
+                  )}
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
+                    {waitingGames.length}개
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
-          {waitingGames.map((game) => {
+          {displayedWaitingGames.map((game) => {
             const playerIds = [...game.team1, ...game.team2];
             const hasPlayingMember = playerIds.some((id) => {
               const participant = participantMap.get(id);
@@ -432,7 +581,7 @@ export function CourtsTab({
               onEditGame?.(playerIds, game.id);
             }
 
-            const editHandlers = readOnly
+            const editHandlers = readOnly || isReorderingWaitingGames
               ? {}
               : {
                   role: "button" as const,
@@ -472,8 +621,11 @@ export function CourtsTab({
             return (
               <div
                 key={game.id}
+                data-waiting-game-id={game.id}
                 className={`mb-3 rounded-xl border border-[var(--color-border)] border-l-4 border-l-amber-400 bg-white p-4 shadow-sm ${
-                  readOnly ? "" : "cursor-pointer select-none active:bg-amber-50/40"
+                  readOnly || isReorderingWaitingGames ? "" : "cursor-pointer select-none active:bg-amber-50/40"
+                } ${
+                  draggingWaitingGameId === game.id ? "opacity-70 ring-2 ring-[var(--color-primary)]" : ""
                 }`}
                 {...editHandlers}
               >
@@ -492,25 +644,42 @@ export function CourtsTab({
 
                   {!readOnly && (
                     <div className="flex flex-col gap-1.5" onClick={(event) => event.stopPropagation()}>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          startGame(game.id);
-                        }}
-                        disabled={!canStart}
-                        className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
-                      >
-                        시작
-                      </button>
-                      <button
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          cancelGame(game.id);
-                        }}
-                        className="rounded-md bg-[#f1f5f8] px-3 py-1.5 text-[10px] font-semibold text-[var(--color-text-secondary)]"
-                      >
-                        취소
-                      </button>
+                      {isReorderingWaitingGames ? (
+                        <button
+                          type="button"
+                          onPointerDown={(event) => handleWaitingGameDragStart(event, game.id)}
+                          onPointerMove={handleWaitingGameDragMove}
+                          onPointerUp={handleWaitingGameDragEnd}
+                          onPointerCancel={handleWaitingGameDragEnd}
+                          disabled={savingWaitingOrder}
+                          aria-label="대기중인 게임 순서 이동"
+                          className="flex h-10 w-10 touch-none items-center justify-center rounded-lg bg-amber-50 text-amber-600 active:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <DragHandleIcon />
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              startGame(game.id);
+                            }}
+                            disabled={!canStart}
+                            className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-[10px] font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+                          >
+                            시작
+                          </button>
+                          <button
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              cancelGame(game.id);
+                            }}
+                            className="rounded-md bg-[#f1f5f8] px-3 py-1.5 text-[10px] font-semibold text-[var(--color-text-secondary)]"
+                          >
+                            취소
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -520,7 +689,7 @@ export function CourtsTab({
         </div>
       )}
 
-      {!readOnly && onManualMatch && onAutoMatch && (
+      {!readOnly && !isReorderingWaitingGames && onManualMatch && onAutoMatch && (
         <div className="fixed bottom-5 left-1/2 z-30 flex w-[calc(100%-32px)] max-w-3xl -translate-x-1/2 gap-2">
           <button
             onClick={onAutoMatch}
@@ -549,6 +718,24 @@ export function CourtsTab({
         />
       )}
     </div>
+  );
+}
+
+function DragHandleIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeWidth="2"
+    >
+      <path d="M7 8h10" />
+      <path d="M7 12h10" />
+      <path d="M7 16h10" />
+    </svg>
   );
 }
 
