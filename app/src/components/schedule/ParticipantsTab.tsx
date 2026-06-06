@@ -7,6 +7,7 @@ import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
 import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AddIcon, MembersIcon } from "@/components/icons";
 
 interface Props {
   scheduleId: string;
@@ -142,9 +143,10 @@ export function ParticipantsTab({
         <div className="fixed bottom-5 left-1/2 z-30 w-[calc(100%-32px)] max-w-3xl -translate-x-1/2">
           <button
             onClick={onAddClick}
-            className="w-full rounded-xl bg-[var(--color-accent)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-accent-dark)]"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-[var(--color-accent)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-accent-dark)]"
           >
-            + 참여자 추가
+            <AddIcon aria-hidden="true" className="h-4 w-4" />
+            참여자 추가
           </button>
         </div>
       )}
@@ -224,7 +226,7 @@ export function ParticipantsTab({
 
       {active.length === 0 && registered.length === 0 && (
         <div className="py-12 text-center text-[var(--color-text-muted)]">
-          <p className="mb-2 text-3xl">👥</p>
+          <MembersIcon aria-hidden="true" className="mx-auto mb-2 h-9 w-9" />
           <p className="text-sm">참여자가 없습니다</p>
           {!readOnly && <p className="mt-1 text-xs">참여자를 추가하세요</p>}
         </div>

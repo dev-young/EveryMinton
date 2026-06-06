@@ -6,6 +6,7 @@ import { feedbackRepository } from "@/repositories";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useModalHistory } from "@/hooks/useModalHistory";
+import { CloseIcon } from "@/components/icons";
 
 interface Props {
   scheduleId: string;
@@ -57,10 +58,10 @@ export function FeedbackModal({ scheduleId, mode, onClose }: Props) {
           <button
             type="button"
             onClick={() => closeWithHistory()}
-            className="px-1 text-xl text-[var(--color-text-muted)]"
+            className="flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)]"
             aria-label="닫기"
           >
-            ✕
+            <CloseIcon aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
 

@@ -7,6 +7,7 @@ import { memberRepository } from "@/repositories";
 import { calculateScore, scoreToLevelInfo } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { BackIcon } from "@/components/icons";
 
 interface Props {
   memberId: string;
@@ -140,10 +141,10 @@ export function MemberEditClient({ memberId, returnPath }: Props) {
         <button
           type="button"
           onClick={closeEditor}
-          className="flex h-7 w-7 shrink-0 items-center justify-center text-lg leading-none text-[var(--color-text-muted)]"
+          className="flex h-7 w-7 shrink-0 items-center justify-center text-[var(--color-text-muted)]"
           aria-label="뒤로가기"
         >
-          ❮
+          <BackIcon aria-hidden="true" className="h-5 w-5" />
         </button>
         <h1 className="min-w-0 flex-1 truncate text-lg font-bold">모임원 수정</h1>
         <button

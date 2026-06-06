@@ -7,6 +7,7 @@ import { scoreToLevelInfo, scoreToViewLevelDisplay } from "@/lib/level";
 import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/participantStats";
 import { useToast } from "@/components/Toast";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { AutoMatchIcon, DragHandleIcon, ManualMatchIcon } from "@/components/icons";
 
 interface Props {
   scheduleId: string;
@@ -655,7 +656,7 @@ export function CourtsTab({
                           aria-label="대기중인 게임 순서 이동"
                           className="flex h-10 w-10 touch-none items-center justify-center rounded-lg bg-amber-50 text-amber-600 active:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                          <DragHandleIcon />
+                          <DragHandleIcon aria-hidden="true" className="h-5 w-5" />
                         </button>
                       ) : (
                         <>
@@ -693,15 +694,17 @@ export function CourtsTab({
         <div className="fixed bottom-5 left-1/2 z-30 flex w-[calc(100%-32px)] max-w-3xl -translate-x-1/2 gap-2">
           <button
             onClick={onAutoMatch}
-            className="flex-1 rounded-xl bg-[var(--color-accent)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-accent-dark)]"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--color-accent)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-accent-dark)]"
           >
-            ⚡ 자동 매칭
+            <AutoMatchIcon aria-hidden="true" className="h-4 w-4" />
+            자동 매칭
           </button>
           <button
             onClick={onManualMatch}
-            className="flex-1 rounded-xl bg-[var(--color-primary)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-primary-dark)]"
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--color-primary)] py-3.5 text-sm font-bold text-white shadow-lg active:bg-[var(--color-primary-dark)]"
           >
-            ✋ 수동 매칭
+            <ManualMatchIcon aria-hidden="true" className="h-4 w-4" />
+            수동 매칭
           </button>
         </div>
       )}
@@ -718,24 +721,6 @@ export function CourtsTab({
         />
       )}
     </div>
-  );
-}
-
-function DragHandleIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeWidth="2"
-    >
-      <path d="M7 8h10" />
-      <path d="M7 12h10" />
-      <path d="M7 16h10" />
-    </svg>
   );
 }
 

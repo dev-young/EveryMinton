@@ -16,6 +16,7 @@ import { AutoMatchModal } from "@/components/schedule/AutoMatchModal";
 import { MemberAddModal } from "@/components/MemberAddModal";
 import { FeedbackModal } from "@/components/FeedbackModal";
 import { useToast } from "@/components/Toast";
+import { BackIcon } from "@/components/icons";
 
 type Mode = "admin" | "view";
 
@@ -242,10 +243,10 @@ export function ScheduleDetailClient({ scheduleId, mode, initialTab = "courts" }
           {!isReadOnly && (
             <button
               onClick={() => router.push("/")}
-              className="flex h-7 w-7 shrink-0 items-center justify-center text-lg leading-none"
+              className="flex h-7 w-7 shrink-0 items-center justify-center"
               aria-label="뒤로가기"
             >
-              ❮
+              <BackIcon aria-hidden="true" className="h-5 w-5" />
             </button>
           )}
           <h1 className="truncate text-base font-bold leading-7">{titleDisplay}</h1>

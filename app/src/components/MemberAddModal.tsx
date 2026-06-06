@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useModalHistory } from "@/hooks/useModalHistory";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CloseIcon } from "@/components/icons";
 
 interface Props {
   member: Member | null;
@@ -181,10 +182,12 @@ export function MemberAddModal({ member, defaultName, defaultGender, defaultGrad
             {isEdit ? "모임원 수정" : "모임원 등록"}
           </h2>
           <button
+            type="button"
             onClick={closeModal}
-            className="text-xl text-[var(--color-text-muted)] px-1"
+            className="flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)]"
+            aria-label="닫기"
           >
-            ✕
+            <CloseIcon aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
 
