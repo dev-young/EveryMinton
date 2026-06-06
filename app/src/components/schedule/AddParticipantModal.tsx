@@ -7,6 +7,7 @@ import { scoreToLevelInfo } from "@/lib/level";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useModalHistory } from "@/hooks/useModalHistory";
+import { CloseIcon } from "@/components/icons";
 
 interface Props {
   scheduleId: string;
@@ -173,10 +174,10 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
         <button
           type="button"
           onClick={closeModal}
-          className="flex h-8 w-8 items-center justify-center text-xl text-[var(--color-text-muted)]"
+          className="flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)]"
           aria-label="닫기"
         >
-          ✕
+          <CloseIcon aria-hidden="true" className="h-5 w-5" />
         </button>
         <h2 className="text-lg font-bold">참여자 추가</h2>
       </header>

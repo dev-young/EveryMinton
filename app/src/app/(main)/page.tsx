@@ -5,6 +5,7 @@ import { Schedule } from "@/types";
 import { scheduleRepository } from "@/repositories";
 import { ScheduleCard } from "@/components/ScheduleCard";
 import { ScheduleAddModal } from "@/components/ScheduleAddModal";
+import { AddIcon, ScheduleIcon } from "@/components/icons";
 
 export default function HomePage() {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
@@ -51,9 +52,10 @@ export default function HomePage() {
       <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-30 max-w-3xl w-[calc(100%-32px)]">
         <button
           onClick={() => setShowAddModal(true)}
-          className="w-full py-3.5 bg-[var(--color-accent)] text-white rounded-xl text-sm font-bold active:bg-[var(--color-accent-dark)] shadow-lg"
+          className="flex w-full items-center justify-center gap-1.5 py-3.5 bg-[var(--color-accent)] text-white rounded-xl text-sm font-bold active:bg-[var(--color-accent-dark)] shadow-lg"
         >
-          + 일정 생성
+          <AddIcon aria-hidden="true" className="h-4 w-4" />
+          일정 생성
         </button>
       </div>
 
@@ -63,7 +65,7 @@ export default function HomePage() {
         </div>
       ) : schedules.length === 0 ? (
         <div className="text-center py-16 text-[var(--color-text-muted)]">
-          <p className="text-4xl mb-3">📅</p>
+          <ScheduleIcon aria-hidden="true" className="mx-auto mb-3 h-10 w-10" />
           <p className="text-sm">등록된 일정이 없습니다</p>
           <p className="text-xs mt-1">일정을 생성하여 시작하세요</p>
         </div>

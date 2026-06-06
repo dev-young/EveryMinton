@@ -4,6 +4,7 @@ import { scheduleRepository } from "@/repositories";
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useModalHistory } from "@/hooks/useModalHistory";
+import { AddIcon, CloseIcon, MinusIcon } from "@/components/icons";
 
 interface Props {
   schedule: Schedule | null;
@@ -171,10 +172,12 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
             {isEdit ? "일정 수정" : "일정 생성"}
           </h2>
           <button
+            type="button"
             onClick={closeModal}
-            className="text-xl text-[var(--color-text-muted)] px-1"
+            className="flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)]"
+            aria-label="닫기"
           >
-            ✕
+            <CloseIcon aria-hidden="true" className="h-5 w-5" />
           </button>
         </div>
 
@@ -275,18 +278,20 @@ export function ScheduleAddModal({ schedule, lastSchedule, onClose, onSaved }: P
               type="button"
               onClick={() => setCourtCount(Math.max(1, courtCount - 1))}
               disabled={courtCountUnset}
-              className="w-10 h-10 rounded-lg border border-[var(--color-border)] text-lg font-bold text-[var(--color-text-secondary)] active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex w-10 h-10 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="코트 수 줄이기"
             >
-              −
+              <MinusIcon aria-hidden="true" className="h-4 w-4" />
             </button>
             <span className="w-12 text-center text-xl font-bold">{courtCountUnset ? "미정" : courtCount}</span>
             <button
               type="button"
               onClick={() => setCourtCount(courtCount + 1)}
               disabled={courtCountUnset}
-              className="w-10 h-10 rounded-lg border border-[var(--color-border)] text-lg font-bold text-[var(--color-text-secondary)] active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex w-10 h-10 items-center justify-center rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] active:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="코트 수 늘리기"
             >
-              +
+              <AddIcon aria-hidden="true" className="h-4 w-4" />
             </button>
             {!courtCountUnset && <span className="text-sm text-[var(--color-text-muted)]">면</span>}
           </div>

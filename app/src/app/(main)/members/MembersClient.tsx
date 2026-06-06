@@ -7,6 +7,7 @@ import { memberRepository } from "@/repositories";
 import { scoreToLevelInfo } from "@/lib/level";
 import { MemberAddModal } from "@/components/MemberAddModal";
 import { MemberListItem } from "@/components/MemberListItem";
+import { AddIcon, BadmintonIcon } from "@/components/icons";
 
 interface Props {
   searchQuery: string;
@@ -133,9 +134,10 @@ export function MembersClient({
             }
             setShowAddModal(true);
           }}
-          className="bg-[var(--color-accent)] text-white px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap active:bg-[var(--color-accent-dark)]"
+          className="flex items-center justify-center gap-1.5 bg-[var(--color-accent)] text-white px-4 py-2.5 rounded-lg text-sm font-bold whitespace-nowrap active:bg-[var(--color-accent-dark)]"
         >
-          + 등록
+          <AddIcon aria-hidden="true" className="h-4 w-4" />
+          등록
         </button>
       </div>
 
@@ -184,7 +186,7 @@ export function MembersClient({
         </div>
       ) : filteredMembers.length === 0 ? (
         <div className="text-center py-10 text-[var(--color-text-muted)]">
-          <p className="text-4xl mb-3">🏸</p>
+          <BadmintonIcon aria-hidden="true" className="mx-auto mb-3 h-10 w-10" />
           <p className="text-sm">
             {members.length === 0
               ? "등록된 모임원이 없습니다"

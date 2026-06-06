@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useModalHistory } from "@/hooks/useModalHistory";
+import { CloseIcon, SwapIcon } from "@/components/icons";
 
 interface Props {
   scheduleId: string;
@@ -262,7 +263,14 @@ export function ManualMatchModal({
           <div className="w-9 h-1 bg-[var(--color-border)] rounded-full mx-auto mb-4" />
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">수동 매칭</h2>
-            <button onClick={closeModal} className="text-xl text-[var(--color-text-muted)] px-1">✕</button>
+            <button
+              type="button"
+              onClick={closeModal}
+              className="flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)]"
+              aria-label="닫기"
+            >
+              <CloseIcon aria-hidden="true" className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -553,7 +561,7 @@ function Slot({
           className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-400 text-white rounded-full text-[9px] flex items-center justify-center"
           aria-label={`${member.name} 선택 해제`}
         >
-          ✕
+          <CloseIcon aria-hidden="true" className="h-2.5 w-2.5" strokeWidth={3} />
         </button>
         {canStartSwap && (
           <button
@@ -563,7 +571,7 @@ function Slot({
             aria-label={`${member.name} 교체 시작`}
             title="교체"
           >
-            <SwapIcon />
+            <SwapIcon aria-hidden="true" className="h-2.5 w-2.5" strokeWidth={2.2} />
           </button>
         )}
         {canSwapTarget && (
@@ -574,7 +582,7 @@ function Slot({
             aria-label={`${member.name}와 교환`}
             title="교환"
           >
-            <SwapIcon />
+            <SwapIcon aria-hidden="true" className="h-2.5 w-2.5" strokeWidth={2.2} />
           </button>
         )}
       </div>
@@ -589,26 +597,6 @@ function Slot({
     >
       {index + 1}번
     </div>
-  );
-}
-
-function SwapIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 16 16"
-      className="h-3 w-3"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="1.8"
-    >
-      <path d="M3 5h8" />
-      <path d="M9 3l2 2-2 2" />
-      <path d="M13 11H5" />
-      <path d="M7 9l-2 2 2 2" />
-    </svg>
   );
 }
 

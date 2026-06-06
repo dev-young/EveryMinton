@@ -9,6 +9,7 @@ import { calculateGamesPerHour, getScheduleStatReferenceAt } from "@/lib/partici
 import { useToast } from "@/components/Toast";
 import { useLockBodyScroll } from "@/hooks/useLockBodyScroll";
 import { useModalHistory } from "@/hooks/useModalHistory";
+import { AddIcon, CloseIcon, MinusIcon } from "@/components/icons";
 
 interface Props {
   scheduleId: string;
@@ -183,7 +184,14 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
           <div className="w-9 h-1 bg-[var(--color-border)] rounded-full mx-auto mb-4" />
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">자동 매칭</h2>
-            <button onClick={closeModal} className="text-xl text-[var(--color-text-muted)] px-1">✕</button>
+            <button
+              type="button"
+              onClick={closeModal}
+              className="flex h-8 w-8 items-center justify-center text-[var(--color-text-muted)]"
+              aria-label="닫기"
+            >
+              <CloseIcon aria-hidden="true" className="h-5 w-5" />
+            </button>
           </div>
         </div>
 
@@ -213,16 +221,18 @@ export function AutoMatchModal({ scheduleId, schedule, participants, members, ga
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setGameCount(Math.max(1, gameCount - 1))}
-                  className="w-7 h-7 rounded-md border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-secondary)]"
+                  className="flex w-7 h-7 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)]"
+                  aria-label="생성 게임 수 줄이기"
                 >
-                  −
+                  <MinusIcon aria-hidden="true" className="h-3.5 w-3.5" />
                 </button>
                 <span className="text-sm font-bold w-4 text-center">{gameCount}</span>
                 <button
                   onClick={() => setGameCount(gameCount + 1)}
-                  className="w-7 h-7 rounded-md border border-[var(--color-border)] text-sm font-bold text-[var(--color-text-secondary)]"
+                  className="flex w-7 h-7 items-center justify-center rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)]"
+                  aria-label="생성 게임 수 늘리기"
                 >
-                  +
+                  <AddIcon aria-hidden="true" className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
