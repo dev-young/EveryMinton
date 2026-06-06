@@ -523,6 +523,7 @@ function Slot({
   if (member) {
     const isMale = member.gender === "male";
     const isSlotActionable = isSwapSource || canSwapTarget;
+    const hasCornerAction = canStartSwap || canSwapTarget;
     const slotActionLabel = isSwapSource
       ? `${member.name} 교체 취소`
       : canSwapTarget
@@ -555,7 +556,9 @@ function Slot({
         tabIndex={isSlotActionable ? 0 : undefined}
         aria-label={slotActionLabel}
       >
-        <span className="block w-full min-w-0 truncate px-5 text-center">{member.name}</span>
+        <span className={`block w-full min-w-0 truncate pl-1.5 text-center ${hasCornerAction ? "pr-4" : "pr-1.5"}`}>
+          {member.name}
+        </span>
         <button
           onClick={(e) => { e.stopPropagation(); onRemove(); }}
           className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-gray-400 text-white rounded-full text-[9px] flex items-center justify-center"
