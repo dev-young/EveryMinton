@@ -64,10 +64,17 @@ export function AddParticipantModal({ scheduleId, members, existingParticipants,
 
   useEffect(() => {
     onSavedRef.current = onSaved;
-    suspendHistoryCloseRef.current = suspendHistoryClose;
     if (suspendHistoryClose) {
+      suspendHistoryCloseRef.current = true;
+      ignoreHistoryCloseUntilRef.current = Date.now() + 800;
+      return;
+    }
+
+    if (suspendHistoryCloseRef.current) {
       ignoreHistoryCloseUntilRef.current = Date.now() + 800;
     }
+
+    suspendHistoryCloseRef.current = false;
   });
 
   useEffect(() => {
